@@ -18,6 +18,8 @@ w folderze, bez ponownego kodowania.
 | Sekundy po wywołaniu | dopisuje do klipu to, co dzieje się tuż po skrócie |
 | FPS / rozdzielczość / jakość | 24 do 120 klatek, natywna do 480p, 4 poziomy jakości |
 | Enkoder | auto (NVENC / AMF / QSV), albo procesor (x264) |
+| Panel klipów | zakładka KLIPY: miniatury, odtwarzacz (podgląd, przewijanie, prędkość, pełny ekran), usuwanie |
+| Pauza | przycisk PAUZA zatrzymuje nagrywanie, wtedy program nie nagrywa ekranu |
 | Ekran | który monitor nagrywać |
 | Dźwięk | mikrofon lub „Stereo Mix” (dźwięk systemowy) |
 | Skrót | domyślnie `Alt+F10` |

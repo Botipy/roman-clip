@@ -3,13 +3,14 @@ const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, dialog, shell, 
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
+const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const recorder = require('./lib/recorder');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'clipmodel', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
-app.disableHardwareAcceleration(); // UI jest prosty; bez procesu GPU appka zajmuje mniej pamięci i nie rusza GPU gry
+// Akceleracja GPU zostaje włączona: odtwarzacz klipów potrzebuje sprzętowego dekodowania (np. H.265).
 
 const MODEL_ZIP_URL = 'https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip';
 const DEFAULTS = {
@@ -71,6 +72,7 @@ async function clip(source) {
     const name = `Klip ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.mp4`;
     const file = await recorder.saveClip(settings.seconds + settings.afterSeconds, path.join(settings.outputDir, name));
     if (settings.sound) shell.beep();
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('clip:saved', file);
     if (settings.notify) {
       const n = new Notification({ title: 'Zapisano klip', body: `${path.basename(file)} (${source})`, silent: true });
       n.on('click', () => shell.showItemInFolder(file));
@@ -132,13 +134,14 @@ function syncVoice() {
 
 // ---------- okna / tray ----------
 function openSettings() {
-  if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
+  if (settingsWin && !settingsWin.isDestroyed()) { if (settingsWin.isMinimized()) settingsWin.restore(); settingsWin.show(); settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
-    width: 520, height: 760, title: 'Roman Clip', backgroundColor: '#07070b', autoHideMenuBar: true,
+    width: 720, height: 900, minWidth: 560, minHeight: 640, show: false, frame: false, title: 'Roman Clip', backgroundColor: '#05050a',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   settingsWin.removeMenu();
+  settingsWin.once('ready-to-show', () => settingsWin.show());
   settingsWin.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
 }
 
@@ -210,6 +213,57 @@ ipcMain.handle('set', async (_e, patch) => {
   return { settings, status: status() };
 });
 ipcMain.handle('clip', () => clip('przycisk'));
+ipcMain.handle('togglePause', () => togglePause());
+ipcMain.on('win:min', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+ipcMain.on('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+
+// ---------- biblioteka klipów ----------
+const inClipsDir = (p) => {
+  const rel = path.relative(path.resolve(settings.outputDir), path.resolve(String(p)));
+  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel) && /\.mp4$/i.test(p);
+};
+ipcMain.handle('clips:list', () => {
+  try {
+    return fs.readdirSync(settings.outputDir).filter((n) => /\.mp4$/i.test(n)).map((name) => {
+      const p = path.join(settings.outputDir, name), st = fs.statSync(p);
+      return { name, path: p, url: pathToFileURL(p).href, size: st.size, mtime: st.mtimeMs };
+    }).sort((a, b) => b.mtime - a.mtime).slice(0, 300);
+  } catch { return []; }
+});
+// miniatura + czas trwania (ffmpeg, po jednym klipie naraz, wynik w cache na dysku)
+let metaQueue = Promise.resolve();
+function getMeta(p) {
+  return new Promise((resolve) => {
+    const st = fs.statSync(p);
+    const dir = path.join(app.getPath('userData'), 'thumbs');
+    fs.mkdirSync(dir, { recursive: true });
+    const id = crypto.createHash('sha1').update(p + st.mtimeMs + st.size).digest('hex').slice(0, 20);
+    const jpg = path.join(dir, id + '.jpg'), js = path.join(dir, id + '.json');
+    const done = (duration) => {
+      let thumb = null;
+      try { thumb = 'data:image/jpeg;base64,' + fs.readFileSync(jpg).toString('base64'); } catch {}
+      resolve({ thumb, duration });
+    };
+    try { if (fs.existsSync(jpg) && fs.existsSync(js)) return done(JSON.parse(fs.readFileSync(js, 'utf8')).duration); } catch {}
+    execFile(recorder.ffmpegPath, ['-hide_banner', '-ss', '1', '-i', p, '-frames:v', '1', '-vf', 'scale=380:-2', '-q:v', '5', '-y', jpg],
+      { windowsHide: true, timeout: 20000 }, (_e, _o, stderr) => {
+        const m = /Duration: (\d+):(\d+):(\d+\.?\d*)/.exec(String(stderr));
+        const duration = m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : 0;
+        try { fs.writeFileSync(js, JSON.stringify({ duration })); } catch {}
+        done(duration);
+      });
+  });
+}
+ipcMain.handle('clips:meta', (_e, p) => {
+  if (!inClipsDir(p)) return null;
+  const job = metaQueue.then(() => getMeta(p)).catch(() => null);
+  metaQueue = job;
+  return job;
+});
+ipcMain.handle('clips:delete', async (_e, p) => { if (inClipsDir(p)) await shell.trashItem(path.resolve(p)); });
+ipcMain.handle('clips:reveal', (_e, p) => { if (inClipsDir(p)) shell.showItemInFolder(path.resolve(p)); });
+ipcMain.handle('clips:open', (_e, p) => { if (inClipsDir(p)) return shell.openPath(path.resolve(p)); });
+
 ipcMain.handle('checkUpdates', () => checkUpdates());
 ipcMain.handle('installUpdate', () => installUpdate());
 ipcMain.handle('pickDir', async () => {
@@ -218,7 +272,10 @@ ipcMain.handle('pickDir', async () => {
 });
 ipcMain.handle('openDir', () => { fs.mkdirSync(settings.outputDir, { recursive: true }); return shell.openPath(settings.outputDir); });
 ipcMain.handle('audioDevices', () => recorder.listAudioDevices());
-ipcMain.handle('displays', () => screen.getAllDisplays().map((d, i) => `Ekran ${i + 1} (${Math.round(d.size.width * d.scaleFactor)}x${Math.round(d.size.height * d.scaleFactor)})`));
+ipcMain.handle('displays', () => screen.getAllDisplays().map((d, i) => {
+  const w = Math.round(d.size.width * d.scaleFactor), h = Math.round(d.size.height * d.scaleFactor);
+  return { label: `Ekran ${i + 1} (${w}x${h})`, w, h };
+}));
 ipcMain.handle('downloadModel', downloadModel);
 ipcMain.on('voice:heard', (_e, text) => {
   const phrase = settings.voicePhrase.trim().toLowerCase();
@@ -239,7 +296,7 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media');
 
-  tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')).resize({ width: 16, height: 16 }));
+  tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.ico')));
   tray.on('click', openSettings);
   rebuildTray();
   registerHotkey();

@@ -3,78 +3,155 @@
 <head>
 <meta charset="utf-8">
 <title>Roman Clip</title>
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="settings.css">
 </head>
 <body>
-<header>
-  <div>
-    <h1>Roman Clip</h1>
-    <p class="sub">// edgerunner recorder <span id="ver"></span></p>
+<div class="bg-grid"></div>
+
+<header class="titlebar">
+  <div class="tb-title"><img src="../assets/icon.png" alt=""><b>ROMAN CLIP</b><span id="ver" class="tb-ver"></span></div>
+  <div class="tb-btns">
+    <button id="wMin" title="Minimalizuj" aria-label="Minimalizuj"><svg viewBox="0 0 24 24"><path d="M5 17h14"/></svg></button>
+    <button id="wClose" class="x" title="Zamknij do zasobnika" aria-label="Zamknij"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
-  <span id="state" class="pill">…</span>
 </header>
 
-<button id="clipNow" class="big">Zapisz klip teraz</button>
+<div class="scroll"><div class="wrap">
 
-<div class="updbar"><span id="updText">…</span><button id="updBtn">Sprawdź aktualizacje</button></div>
+  <section class="hud">
+    <div class="hud-top">
+      <img class="hud-logo" src="../assets/icon.png" alt="">
+      <div class="hud-id">
+        <h1>ROMAN CLIP</h1>
+        <p class="tag">// EDGERUNNER RECORDER</p>
+      </div>
+      <div id="state" class="chip">…</div>
+    </div>
+    <div class="hud-meta" id="meta"></div>
+    <div class="hud-actions">
+      <button id="clipNow" class="rec-btn"><i class="dot"></i><span>ZAPISZ KLIP</span><kbd id="hkBtn"></kbd></button>
+      <button id="pauseBtn" class="pause-btn"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span>PAUZA</span></button>
+    </div>
+    <div id="pausedBanner" class="paused-banner" hidden>NAGRYWANIE WSTRZYMANE // PROGRAM NIE NAGRYWA EKRANU</div>
+  </section>
 
-<section>
-  <h2>Klip</h2>
-  <label>Długość klipu (s) <input type="number" id="seconds" min="5" max="300"></label>
-  <label>Dodatkowe sekundy po wywołaniu <input type="number" id="afterSeconds" min="0" max="30"></label>
-  <label>Klatki na sekundę
-    <select id="fps"><option>24</option><option>30</option><option>45</option><option>60</option><option>90</option><option>120</option></select>
-  </label>
-  <label>Rozdzielczość
-    <select id="height"><option value="0">Natywna (najlżejsza)</option><option value="1440">1440p</option><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option></select>
-  </label>
-  <label>Jakość
-    <select id="quality"><option value="low">Niska</option><option value="medium">Średnia</option><option value="high">Wysoka</option><option value="ultra">Bardzo wysoka</option></select>
-  </label>
-  <label>Kodek
-    <select id="codec"><option value="h264">H.264 (działa wszędzie)</option><option value="hevc">H.265 (plik mniejszy o ok. 30–40%)</option></select>
-  </label>
-  <p class="hint">H.265 wymaga GPU z jego obsługą, a niektóre programy (np. podgląd w Discordzie) go nie odtworzą.</p>
-  <label>Enkoder
-    <select id="encoder"><option value="auto">Auto (GPU, jeśli jest)</option><option value="h264_nvenc">NVIDIA (NVENC)</option><option value="h264_amf">AMD (AMF)</option><option value="h264_qsv">Intel (QSV)</option><option value="libx264">Procesor (x264)</option></select>
-  </label>
-  <p class="hint">Natywna rozdzielczość działa w całości na GPU i prawie nie obciąża procesora. Zmniejszanie rozdzielczości liczy się na CPU (kilka razy większe obciążenie).</p>
-  <label>Ekran <select id="monitor"></select></label>
-  <label>Tryb przechwytywania
-    <select id="captureMode"><option value="auto">Auto (zalecany, działa w grach)</option><option value="ddagrab">Desktop Duplication (gry pełnoekranowe)</option><option value="gdigrab">GDI (zgodność, nie łapie gier)</option></select>
-  </label>
-  <p class="hint">Gra (np. Valorant): wybierz ekran, na którym gra działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje.</p>
-  <label>Dźwięk w klipie <select id="audioDevice"></select></label>
-  <p class="hint">Dźwięk systemowy wymaga urządzenia typu „Stereo Mix” / „Miks stereo” (włącz w ustawieniach dźwięku Windowsa).</p>
-</section>
+  <div class="updbar"><span class="upd-dot"></span><span id="updText">…</span><button id="updBtn" class="btn sm">Sprawdź aktualizacje</button></div>
 
-<section>
-  <h2>Wywołanie</h2>
-  <label>Skrót klawiszowy
-    <input id="hotkey" placeholder="kliknij i naciśnij kombinację" readonly>
-  </label>
-  <p class="hint" id="hotkeyMsg"></p>
-  <label class="row"><input type="checkbox" id="voiceEnabled"> Komenda głosowa</label>
-  <label>Fraza <input id="voicePhrase" placeholder="np. klip"></label>
-  <label>Mikrofon <select id="micId"></select></label>
-  <div id="modelBox">
-    <button id="modelBtn">Pobierz model głosowy (ok. 50 MB, raz)</button>
-    <div class="bar"><div id="modelBar"></div></div>
-    <p class="hint" id="modelMsg"></p>
+  <nav class="tabs">
+    <button class="tab on" data-tab="rec">USTAWIENIA</button>
+    <button class="tab" data-tab="clips">KLIPY <em id="clipCount">0</em></button>
+  </nav>
+
+  <!-- ===================== USTAWIENIA ===================== -->
+  <div id="tab-rec" class="pane">
+
+    <section class="card">
+      <h2><b>01</b> KLIP</h2>
+      <div class="row"><label>Długość klipu</label>
+        <div class="slider"><input type="range" data-key="seconds" min="5" max="300" step="5"><span class="val" data-fmt="s"></span></div></div>
+      <div class="row"><label>Dogranie po wywołaniu</label>
+        <div class="slider"><input type="range" data-key="afterSeconds" min="0" max="30" step="1"><span class="val" data-fmt="s"></span></div></div>
+      <div class="row"><label>Klatki na sekundę</label>
+        <div class="seg" data-key="fps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="90">90</button><button data-v="120">120</button></div></div>
+      <div class="row"><label>Rozdzielczość</label>
+        <div class="seg" data-key="height"><button data-v="0">NATYWNA</button><button data-v="1440">1440P</button><button data-v="1080">1080P</button><button data-v="720">720P</button><button data-v="480">480P</button></div></div>
+      <div class="row"><label>Jakość</label>
+        <div class="seg" data-key="quality"><button data-v="low">NISKA</button><button data-v="medium">ŚREDNIA</button><button data-v="high">WYSOKA</button><button data-v="ultra">MAX</button></div></div>
+      <div class="row"><label>Kodek</label>
+        <div class="seg" data-key="codec"><button data-v="h264">H.264</button><button data-v="hevc">H.265 (MNIEJSZY)</button></div></div>
+      <div class="est" id="est"></div>
+      <p class="hint">Natywna rozdzielczość działa w całości na GPU i prawie nie obciąża procesora. Zmniejszanie rozdzielczości liczy się na CPU. H.265 daje plik o ok. 30–40% mniejszy, ale część programów (np. podgląd w Discordzie) go nie odtworzy.</p>
+    </section>
+
+    <section class="card">
+      <h2><b>02</b> ŹRÓDŁO</h2>
+      <div class="row"><label>Ekran</label><select data-key="monitor" id="monitor"></select></div>
+      <div class="row"><label>Przechwytywanie</label>
+        <select data-key="captureMode"><option value="auto">Auto (zalecane, działa w grach)</option><option value="ddagrab">Desktop Duplication (gry)</option><option value="gdigrab">GDI (zgodność, nie łapie gier)</option></select></div>
+      <div class="row"><label>Enkoder</label>
+        <select data-key="encoder"><option value="auto">Auto (GPU, jeśli jest)</option><option value="h264_nvenc">NVIDIA (NVENC)</option><option value="h264_amf">AMD (AMF)</option><option value="h264_qsv">Intel (QSV)</option><option value="libx264">Procesor (x264)</option></select></div>
+      <div class="row"><label>Dźwięk w klipie</label><select data-key="audioDevice" id="audioDevice"></select></div>
+      <p class="hint">Gra (np. Valorant): wybierz ekran, na którym działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje. Dźwięk systemowy wymaga urządzenia „Stereo Mix” (włącz je w ustawieniach dźwięku Windowsa).</p>
+    </section>
+
+    <section class="card">
+      <h2><b>03</b> WYWOŁANIE</h2>
+      <div class="row"><label>Skrót klawiszowy</label>
+        <div class="hk"><div id="hkCaps" class="caps"></div><button id="hkChange" class="btn sm">ZMIEŃ</button></div></div>
+      <p class="hint" id="hotkeyMsg"></p>
+      <label class="tog"><input type="checkbox" data-key="voiceEnabled"><span class="sw"></span><span class="t">Komenda głosowa</span></label>
+      <div class="row"><label>Fraza</label><input type="text" data-key="voicePhrase" placeholder="np. klip" spellcheck="false"></div>
+      <div class="row"><label>Mikrofon</label><select data-key="micId" id="micId"></select></div>
+      <div id="modelBox">
+        <button id="modelBtn" class="btn">POBIERZ MODEL GŁOSOWY (OK. 50 MB, RAZ)</button>
+        <div class="bar"><div id="modelBar"></div></div>
+        <p class="hint" id="modelMsg"></p>
+      </div>
+      <p class="hint">Rozpoznawanie działa offline. Fraza musi być zwykłym słowem znanym modelowi (polskie, powszechne).</p>
+    </section>
+
+    <section class="card">
+      <h2><b>04</b> PLIKI I SYSTEM</h2>
+      <div class="row"><label>Folder klipów</label>
+        <div class="inline"><input id="outputDir" readonly><button id="pick" class="btn sm">ZMIEŃ</button></div></div>
+      <label class="tog"><input type="checkbox" data-key="sound"><span class="sw"></span><span class="t">Dźwięk po zapisaniu klipu</span></label>
+      <label class="tog"><input type="checkbox" data-key="notify"><span class="sw"></span><span class="t">Powiadomienie po zapisaniu</span></label>
+      <label class="tog"><input type="checkbox" data-key="autostart"><span class="sw"></span><span class="t">Uruchamiaj z Windowsem</span></label>
+    </section>
   </div>
-  <p class="hint">Rozpoznawanie działa offline. Fraza musi być słowem znanym modelowi (polskie, zwykłe słowa).</p>
-</section>
 
-<section>
-  <h2>Pliki i aplikacja</h2>
-  <label>Folder klipów
-    <div class="inline"><input id="outputDir" readonly><button id="pick">Zmień</button><button id="open">Otwórz</button></div>
-  </label>
-  <label class="row"><input type="checkbox" id="sound"> Dźwięk po zapisaniu</label>
-  <label class="row"><input type="checkbox" id="notify"> Powiadomienie po zapisaniu</label>
-  <label class="row"><input type="checkbox" id="autostart"> Uruchamiaj z Windowsem</label>
-</section>
+  <!-- ===================== KLIPY ===================== -->
+  <div id="tab-clips" class="pane" hidden>
+    <section class="player" id="player" hidden>
+      <div class="vwrap paused" id="vwrap">
+        <video id="vid" preload="metadata" playsinline></video>
+        <button class="vbig" id="vbig" aria-label="Odtwórz"></button>
+        <div class="verr" id="verr" hidden>
+          <b>NIE MOGĘ ODTWORZYĆ TEGO KLIPU TUTAJ</b>
+          <span>Prawdopodobnie jest w H.265, a ta karta graficzna go nie dekoduje w programie.</span>
+          <button class="btn" id="verrOpen">OTWÓRZ W ODTWARZACZU SYSTEMOWYM</button>
+        </div>
+        <div class="vctl" id="vctl">
+          <div class="seek" id="seek"><div class="seek-fill" id="seekFill"></div><div class="seek-knob" id="seekKnob"></div></div>
+          <div class="vrow">
+            <button id="vPlay" aria-label="Odtwórz / pauza"></button>
+            <button id="vBack" title="Cofnij 5 s (←)" aria-label="Cofnij 5 sekund"></button>
+            <button id="vFwd" title="Do przodu 5 s (→)" aria-label="Do przodu 5 sekund"></button>
+            <span class="vtime" id="vTime">0:00 / 0:00</span>
+            <span class="sp"></span>
+            <button id="vSpeed" class="txt" title="Prędkość">1×</button>
+            <button id="vMute" aria-label="Wycisz"></button>
+            <input type="range" id="vVol" min="0" max="1" step="0.05" value="1" aria-label="Głośność">
+            <button id="vFull" title="Pełny ekran (F)" aria-label="Pełny ekran"></button>
+          </div>
+        </div>
+      </div>
+      <div class="pbar">
+        <div class="pname" id="pName"></div>
+        <div class="pacts">
+          <button class="btn sm" id="aFolder">POKAŻ W FOLDERZE</button>
+          <button class="btn sm" id="aOpen">ODTWARZACZ SYSTEMOWY</button>
+          <button class="btn sm danger" id="aDel">USUŃ</button>
+        </div>
+      </div>
+    </section>
 
+    <div class="clips-head">
+      <h2><b>//</b> ZAPISANE KLIPY</h2>
+      <div><button id="refresh" class="btn sm">ODŚWIEŻ</button> <button id="openDir" class="btn sm">OTWÓRZ FOLDER</button></div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>
+      <b>BRAK KLIPÓW</b>
+      <span>Naciśnij <kbd class="hkLive"></kbd> albo powiedz frazę, a klip pojawi się tutaj.</span>
+    </div>
+  </div>
+
+  <footer class="foot">ROMAN CLIP · by Botipy · MIT</footer>
+</div></div>
+
+<div id="toast" class="toast" hidden></div>
 <script src="settings.js"></script>
 </body>
 </html>

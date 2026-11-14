@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a1426"/>
+      <stop offset="0.55" stop-color="#0b0a12"/>
+      <stop offset="1" stop-color="#050509"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0.5" cy="0.55" r="0.55">
+      <stop offset="0" stop-color="#ff003c" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ff003c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff75e"/>
+      <stop offset="0.55" stop-color="#fcee09"/>
+      <stop offset="1" stop-color="#d9c600"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="0.38" cy="0.32" r="0.85">
+      <stop offset="0" stop-color="#1d4a5c"/>
+      <stop offset="0.5" stop-color="#08171f"/>
+      <stop offset="1" stop-color="#010405"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <pattern id="scan" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="2" fill="#000" opacity="0.30"/>
+    </pattern>
+    <clipPath id="frame"><path d="M0 0H436L512 76V512H76L0 436Z"/></clipPath>
+    <path id="cam" d="M92 214L122 184H168L184 144H292L308 184H392L424 216V396H124L92 364Z"/>
+    <clipPath id="camClip"><use href="#cam"/></clipPath>
+  </defs>
+
+  <!-- tło -->
+  <path d="M0 0H436L512 76V512H76L0 436Z" fill="url(#bg)"/>
+  <g clip-path="url(#frame)">
+    <rect width="512" height="512" fill="url(#aura)"/>
+    <!-- siatka -->
+    <g stroke="#00f0ff" stroke-opacity="0.07" stroke-width="1">
+      <path d="M0 96H512M0 192H512M0 288H512M0 384H512M0 480H512"/>
+      <path d="M96 0V512M192 0V512M288 0V512M384 0V512M480 0V512"/>
+    </g>
+
+    <!-- aberracja chromatyczna -->
+    <use href="#cam" fill="#ff003c" opacity="0.95" transform="translate(-11 3)"/>
+    <use href="#cam" fill="#00f0ff" opacity="0.95" transform="translate(11 -3)"/>
+
+    <!-- korpus kamery -->
+    <use href="#cam" fill="url(#body)"/>
+    <g clip-path="url(#camClip)">
+      <!-- cieniowanie dolne i ryfle -->
+      <rect x="80" y="352" width="360" height="50" fill="#000" opacity="0.16"/>
+      <path d="M312 160V212" stroke="#000" stroke-opacity="0.35" stroke-width="3"/>
+      <g stroke="#000" stroke-opacity="0.45" stroke-width="5">
+        <path d="M206 160V176M222 160V176M238 160V176M254 160V176M270 160V176"/>
+      </g>
+      <!-- czerwony pasek -->
+      <path d="M92 352H206L228 396H92Z" fill="#ff003c"/>
+    </g>
+    <rect x="120" y="300" width="22" height="7" fill="#00f0ff"/>
+    <rect x="388" y="248" width="40" height="7" fill="#ff003c"/>
+    <rect x="100" y="256" width="58" height="5" fill="#fff" opacity="0.55"/>
+
+    <!-- LED REC -->
+    <circle cx="372" cy="214" r="17" fill="#2a0008"/>
+    <circle cx="372" cy="214" r="11" fill="#ff003c" filter="url(#glow)"/>
+    <circle cx="368" cy="210" r="3.6" fill="#ffd0d8"/>
+
+    <!-- obiektyw -->
+    <circle cx="256" cy="292" r="112" fill="#04070a"/>
+    <circle cx="256" cy="292" r="104" fill="none" stroke="#00f0ff" stroke-width="9" filter="url(#glow)"/>
+    <circle cx="256" cy="292" r="90" fill="url(#lens)"/>
+    <circle cx="256" cy="292" r="64" fill="none" stroke="#00f0ff" stroke-opacity="0.5" stroke-width="3"/>
+    <circle cx="256" cy="292" r="42" fill="none" stroke="#ff003c" stroke-opacity="0.75" stroke-width="4"/>
+    <path d="M256 250V334M214 292H298" stroke="#00f0ff" stroke-opacity="0.35" stroke-width="2"/>
+    <circle cx="256" cy="292" r="17" fill="#ff003c" filter="url(#glow)"/>
+    <circle cx="256" cy="292" r="7" fill="#ffd0d8"/>
+    <!-- odblask -->
+    <path d="M196 246A78 78 0 0 1 250 214" fill="none" stroke="#fff" stroke-opacity="0.8" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="300" cy="338" r="6" fill="#fff" fill-opacity="0.45"/>
+
+    <!-- nawiasy ostrości -->
+    <g fill="none" stroke="#00f0ff" stroke-width="8" stroke-linecap="square" filter="url(#glow)">
+      <path d="M44 100V60H84"/>
+      <path d="M428 60H468V100"/>
+      <path d="M468 412V452H428"/>
+      <path d="M84 452H44V412"/>
+    </g>
+
+    <!-- REC -->
+    <g font-family="Consolas, 'Courier New', monospace" font-weight="700" fill="#fcee09">
+      <text x="106" y="436" font-size="30" letter-spacing="3">REC</text>
+      <text x="410" y="436" font-size="22" letter-spacing="2" fill="#00f0ff" text-anchor="end" opacity="0.9">60FPS</text>
+    </g>
+
+    <!-- linie skanowania -->
+    <rect width="512" height="512" fill="url(#scan)"/>
+  </g>
+
+  <!-- obramowanie -->
+  <path d="M5 5H430L507 82V507H82L5 430Z" fill="none" stroke="#fcee09" stroke-width="10" stroke-linejoin="miter"/>
+  <path d="M5 5H430L507 82V507H82L5 430Z" fill="none" stroke="#fcee09" stroke-width="10" filter="url(#glow)" opacity="0.35"/>
+</svg>
