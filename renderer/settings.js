@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const fields = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'audioDevice',
+const fields = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'audioDevice',
   'voicePhrase', 'micId', 'voiceEnabled', 'sound', 'notify', 'autostart'];
 const numeric = new Set(['seconds', 'afterSeconds', 'fps', 'height', 'monitor']);
 

@@ -33,6 +33,10 @@
     <select id="encoder"><option value="auto">Auto (GPU, jeśli jest)</option><option value="h264_nvenc">NVIDIA (NVENC)</option><option value="h264_amf">AMD (AMF)</option><option value="h264_qsv">Intel (QSV)</option><option value="libx264">Procesor (x264)</option></select>
   </label>
   <label>Ekran <select id="monitor"></select></label>
+  <label>Tryb przechwytywania
+    <select id="captureMode"><option value="auto">Auto (zalecany, działa w grach)</option><option value="ddagrab">Desktop Duplication (gry pełnoekranowe)</option><option value="gdigrab">GDI (zgodność, nie łapie gier)</option></select>
+  </label>
+  <p class="hint">Gra (np. Valorant): wybierz ekran, na którym gra działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje.</p>
   <label>Dźwięk w klipie <select id="audioDevice"></select></label>
   <p class="hint">Dźwięk systemowy wymaga urządzenia typu „Stereo Mix” / „Miks stereo” (włącz w ustawieniach dźwięku Windowsa).</p>
 </section>
