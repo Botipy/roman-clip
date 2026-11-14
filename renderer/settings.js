@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const api = window.api;
+const bridge = window.api; // nie "api": kolidowałoby z globalnym window.api z contextBridge
 
 const ICON = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
@@ -48,9 +48,15 @@ function applyControls() {
 async function commit(key, value) {
   S = { ...S, [key]: value };
   applyControls();
-  const r = await api.set({ [key]: value });
-  S = r.settings; ST = r.status;
-  renderStatus(ST);
+  try {
+    const r = await bridge.set({ [key]: value });
+    S = r.settings; ST = r.status;
+    renderStatus(ST);
+  } catch (e) {
+    toast('NIE UDAŁO SIĘ ZAPISAĆ USTAWIENIA');
+    const cur = await bridge.get();
+    S = cur.settings; renderStatus(cur.status); applyControls();
+  }
 }
 
 function bindControls() {
@@ -176,13 +182,13 @@ function renderStatus(s) {
   renderMeta();
 }
 
-$('pauseBtn').onclick = () => api.togglePause();
-$('clipNow').onclick = () => api.clip();
-$('modelBtn').onclick = () => api.downloadModel();
-$('updBtn').onclick = () => ($('updBtn').dataset.act === 'install' ? api.installUpdate() : api.checkUpdates());
-$('pick').onclick = async () => { const d = await api.pickDir(); if (d) commit('outputDir', d); };
-$('wMin').onclick = () => api.winMin();
-$('wClose').onclick = () => api.winClose();
+$('pauseBtn').onclick = () => bridge.togglePause();
+$('clipNow').onclick = () => bridge.clip();
+$('modelBtn').onclick = () => bridge.downloadModel();
+$('updBtn').onclick = () => ($('updBtn').dataset.act === 'install' ? bridge.installUpdate() : bridge.checkUpdates());
+$('pick').onclick = async () => { const d = await bridge.pickDir(); if (d) commit('outputDir', d); };
+$('wMin').onclick = () => bridge.winMin();
+$('wClose').onclick = () => bridge.winClose();
 
 // ---------------------------------------------------------------- zakładki
 function showTab(name) {
@@ -210,7 +216,7 @@ function niceName(n) {
 }
 
 async function loadClips() {
-  clips = await api.clipsList();
+  clips = await bridge.clipsList();
   $('clipCount').textContent = clips.length;
   $('empty').hidden = clips.length > 0;
   const grid = $('grid');
@@ -229,7 +235,7 @@ async function loadClips() {
   const token = ++metaToken;
   for (const c of clips) {                       // miniatury doczytujemy po kolei (lekko dla CPU)
     if (token !== metaToken) return;
-    const meta = await api.clipMeta(c.path);
+    const meta = await bridge.clipMeta(c.path);
     const card = grid.querySelector(`[data-path="${CSS.escape(c.path)}"]`);
     if (!meta || !card) continue;
     if (meta.thumb) { const img = new Image(); img.src = meta.thumb; card.querySelector('.thumb').prepend(img); }
@@ -320,9 +326,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 // akcje na klipie
-$('aFolder').onclick = () => cur && api.clipReveal(cur.path);
-$('aOpen').onclick = () => cur && api.clipOpen(cur.path);
-$('verrOpen').onclick = () => cur && api.clipOpen(cur.path);
+$('aFolder').onclick = () => cur && bridge.clipReveal(cur.path);
+$('aOpen').onclick = () => cur && bridge.clipOpen(cur.path);
+$('verrOpen').onclick = () => cur && bridge.clipOpen(cur.path);
 let delT;
 $('aDel').onclick = async () => {
   const b = $('aDel');
@@ -334,13 +340,13 @@ $('aDel').onclick = async () => {
   clearTimeout(delT); b.classList.remove('confirm'); b.textContent = 'USUŃ';
   const path = cur && cur.path;
   closePlayer();
-  if (path) { await api.clipDelete(path); toast('KLIP PRZENIESIONY DO KOSZA'); loadClips(); }
+  if (path) { await bridge.clipDelete(path); toast('KLIP PRZENIESIONY DO KOSZA'); loadClips(); }
 };
 $('refresh').onclick = loadClips;
-$('openDir').onclick = () => api.openDir();
+$('openDir').onclick = () => bridge.openDir();
 
-api.onStatus(renderStatus);
-api.onClipSaved(() => { toast('ZAPISANO KLIP'); loadClips(); });
+bridge.onStatus(renderStatus);
+bridge.onClipSaved(() => { toast('ZAPISANO KLIP'); loadClips(); });
 
 // ---------------------------------------------------------------- start
 function fillSelect(el, items, current, firstLabel) {
@@ -351,9 +357,9 @@ function fillSelect(el, items, current, firstLabel) {
 }
 
 (async () => {
-  const { settings, status } = await api.get();
+  const { settings, status } = await bridge.get();
   S = settings; ST = status;
-  const [devices, disp] = await Promise.all([api.audioDevices(), api.displays()]);
+  const [devices, disp] = await Promise.all([bridge.audioDevices(), bridge.displays()]);
   displays = disp;
   fillSelect($('audioDevice'), devices.map((d) => [d, d]), S.audioDevice, 'Bez dźwięku');
   fillSelect($('monitor'), displays.map((d, i) => [i, d.label]), S.monitor);

@@ -42,9 +42,11 @@ function saveSettings() {
 function status() {
   return { ...recorder.getState(), hotkeyOk, model, paused, version: app.getVersion(), update: upd };
 }
+let trayTimer = null;
 function pushStatus() {
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('status', status());
-  rebuildTray();
+  clearTimeout(trayTimer);                      // menu zasobnika przebudowujemy rzadko (nie przy każdym postępie pobierania)
+  trayTimer = setTimeout(rebuildTray, 250);
 }
 
 function display() {
@@ -64,7 +66,11 @@ function registerHotkey() {
 
 let clipping = false;
 async function clip(source) {
-  if (clipping || paused) return;
+  if (paused) {
+    new Notification({ title: 'Roman Clip jest wstrzymany', body: 'Program nie nagrywa, więc nie ma czego zapisać. Wznów nagrywanie.' }).show();
+    return;
+  }
+  if (clipping) return;
   clipping = true;
   try {
     if (settings.afterSeconds > 0) await new Promise((r) => setTimeout(r, settings.afterSeconds * 1000));
@@ -106,8 +112,8 @@ async function downloadModel() {
     for await (const chunk of res.body) {
       out.write(chunk);
       got += chunk.length;
-      model.progress = total ? Math.round((got / total) * 90) : 0;
-      pushStatus();
+      const pct = total ? Math.round((got / total) * 90) : 0;
+      if (pct !== model.progress) { model.progress = pct; pushStatus(); }
     }
     await new Promise((r) => out.end(r));
     // vosk-browser wymaga tar.gz; bsdtar z Windows 10+ rozpakowuje zip i pakuje tar.gz
@@ -207,7 +213,7 @@ ipcMain.handle('set', async (_e, patch) => {
   if (patch.hotkey !== undefined) registerHotkey();
   if (patch.autostart !== undefined) app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
   const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice'];
-  if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording();
+  if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording().catch((e) => console.error('restart rekordera:', e));
   if (['voiceEnabled', 'voicePhrase', 'micId'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
   pushStatus();
   return { settings, status: status() };
