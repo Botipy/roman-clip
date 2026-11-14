@@ -132,7 +132,7 @@ function syncVoice() {
 function openSettings() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
-    width: 520, height: 760, title: 'Roman Clip', backgroundColor: '#0b0f1a', autoHideMenuBar: true,
+    width: 520, height: 760, title: 'Roman Clip', backgroundColor: '#07070b', autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
