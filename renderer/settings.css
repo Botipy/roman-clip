@@ -68,3 +68,7 @@ button:disabled { opacity: .5; cursor: default; }
 .bar { height: 6px; background: #11111a; margin-top: 8px; display: none; }
 #modelBar { height: 100%; width: 0; background: var(--yellow); transition: width .2s; }
 #modelBox { margin-top: 8px; }
+
+.sub #ver { color: var(--yellow); margin-left: 6px; }
+.updbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid var(--yellow); background: var(--panel); font-size: 12px; letter-spacing: .06em; color: var(--mute); }
+.updbar .good { color: var(--cyan); } .updbar .bad { color: var(--red); }

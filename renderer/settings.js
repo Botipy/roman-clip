@@ -10,7 +10,27 @@ function fillSelect(el, items, current, firstLabel) {
   el.value = current;
 }
 
+function renderUpdate(s) {
+  $('ver').textContent = 'v' + s.version;
+  const u = s.update, btn = $('updBtn'), t = $('updText');
+  btn.disabled = false; btn.textContent = 'Sprawdź aktualizacje'; btn.dataset.act = 'check';
+  const map = {
+    dev: 'Wersja deweloperska (bez aktualizacji)',
+    idle: 'Aktualizacje: jeszcze nie sprawdzano',
+    checking: 'Sprawdzam aktualizacje…',
+    latest: 'Masz najnowszą wersję',
+    downloading: `Pobieram ${u.version || 'nową wersję'} (${u.percent}%)…`,
+    ready: `Gotowa wersja ${u.version}, zainstaluje się po zamknięciu`,
+    error: 'Nie udało się sprawdzić: ' + (u.error || ''),
+  };
+  t.textContent = map[u.state] || '';
+  t.className = u.state === 'error' ? 'bad' : u.state === 'ready' || u.state === 'downloading' ? 'good' : '';
+  if (u.state === 'ready') { btn.textContent = 'Zainstaluj i zrestartuj'; btn.dataset.act = 'install'; }
+  if (u.state === 'dev' || u.state === 'checking' || u.state === 'downloading') btn.disabled = true;
+}
+
 function renderStatus(s) {
+  renderUpdate(s);
   const pill = $('state');
   if (s.error) { pill.textContent = 'Błąd: ' + s.error; pill.className = 'pill err'; }
   else if (s.paused) { pill.textContent = 'Wstrzymany'; pill.className = 'pill'; }
@@ -66,6 +86,7 @@ $('hotkey').addEventListener('keydown', (e) => {
   window.api.set({ hotkey: $('hotkey').value });
 });
 
+$('updBtn').onclick = () => ($('updBtn').dataset.act === 'install' ? window.api.installUpdate() : window.api.checkUpdates());
 $('clipNow').onclick = () => window.api.clip();
 $('modelBtn').onclick = () => window.api.downloadModel();
 $('open').onclick = () => window.api.openDir();

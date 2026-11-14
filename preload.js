@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('api', {
   get: () => ipcRenderer.invoke('get'),
   set: (patch) => ipcRenderer.invoke('set', patch),
   clip: () => ipcRenderer.invoke('clip'),
+  checkUpdates: () => ipcRenderer.invoke('checkUpdates'),
+  installUpdate: () => ipcRenderer.invoke('installUpdate'),
   pickDir: () => ipcRenderer.invoke('pickDir'),
   openDir: () => ipcRenderer.invoke('openDir'),
   audioDevices: () => ipcRenderer.invoke('audioDevices'),

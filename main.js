@@ -24,6 +24,7 @@ let hotkeyOk = true;
 let model = { ready: false, progress: null, error: null };
 let lastVoiceAt = 0;
 let paused = false;
+let upd = { state: app.isPackaged ? 'idle' : 'dev', version: null, percent: 0, error: null };
 
 const storeFile = () => path.join(app.getPath('userData'), 'settings.json');
 const modelDir = () => path.join(app.getPath('userData'), 'model');
@@ -38,7 +39,7 @@ function saveSettings() {
 }
 
 function status() {
-  return { ...recorder.getState(), hotkeyOk, model, paused };
+  return { ...recorder.getState(), hotkeyOk, model, paused, version: app.getVersion(), update: upd };
 }
 function pushStatus() {
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('status', status());
@@ -143,14 +144,18 @@ function openSettings() {
 
 function rebuildTray() {
   if (!tray) return;
-  tray.setToolTip(paused ? 'Roman Clip (wstrzymany)' : 'Roman Clip');
+  tray.setToolTip((paused ? 'Roman Clip (wstrzymany)' : 'Roman Clip') + ' v' + app.getVersion());
   tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Roman Clip v' + app.getVersion(), enabled: false },
+    { type: 'separator' },
     { label: 'Zapisz klip teraz', click: () => clip('menu'), enabled: !paused },
     { label: 'Ustawienia', click: openSettings },
     { label: 'Otwórz folder z klipami', click: () => { fs.mkdirSync(settings.outputDir, { recursive: true }); shell.openPath(settings.outputDir); } },
     { type: 'separator' },
     { label: paused ? 'Wznów nagrywanie' : 'Wstrzymaj nagrywanie', click: togglePause },
-    { label: 'Sprawdź aktualizacje', click: checkUpdates },
+    upd.state === 'ready'
+      ? { label: `Zainstaluj aktualizację ${upd.version} i zrestartuj`, click: installUpdate }
+      : { label: 'Sprawdź aktualizacje', click: checkUpdates },
     { label: 'Wyjdź', click: () => app.quit() },
   ]));
 }
@@ -162,9 +167,32 @@ async function togglePause() {
   pushStatus();
 }
 
+let updaterWired = false;
+function setUpd(p) { upd = { ...upd, ...p }; pushStatus(); }
+
+function wireUpdater() {
+  if (updaterWired) return require('electron-updater').autoUpdater;
+  updaterWired = true;
+  const { autoUpdater } = require('electron-updater');
+  autoUpdater.on('checking-for-update', () => setUpd({ state: 'checking', error: null }));
+  autoUpdater.on('update-available', (i) => setUpd({ state: 'downloading', version: i.version, percent: 0 }));
+  autoUpdater.on('update-not-available', () => setUpd({ state: 'latest', version: null }));
+  autoUpdater.on('download-progress', (p) => setUpd({ state: 'downloading', percent: Math.round(p.percent) }));
+  autoUpdater.on('update-downloaded', (i) => {
+    setUpd({ state: 'ready', version: i.version });
+    new Notification({ title: 'Roman Clip: aktualizacja gotowa', body: `Wersja ${i.version} zainstaluje się po zamknięciu programu.` }).show();
+  });
+  autoUpdater.on('error', (e) => setUpd({ state: 'error', error: String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 160) }));
+  return autoUpdater;
+}
+
 function checkUpdates() {
   if (!app.isPackaged) return;
-  try { require('electron-updater').autoUpdater.checkForUpdatesAndNotify().catch(() => {}); } catch {}
+  try { wireUpdater().checkForUpdates().catch(() => {}); } catch (e) { setUpd({ state: 'error', error: String(e.message).slice(0, 160) }); }
+}
+
+function installUpdate() {
+  try { require('electron-updater').autoUpdater.quitAndInstall(); } catch {}
 }
 
 // ---------- IPC ----------
@@ -182,6 +210,8 @@ ipcMain.handle('set', async (_e, patch) => {
   return { settings, status: status() };
 });
 ipcMain.handle('clip', () => clip('przycisk'));
+ipcMain.handle('checkUpdates', () => checkUpdates());
+ipcMain.handle('installUpdate', () => installUpdate());
 ipcMain.handle('pickDir', async () => {
   const r = await dialog.showOpenDialog(settingsWin, { properties: ['openDirectory', 'createDirectory'], defaultPath: settings.outputDir });
   return r.canceled ? null : r.filePaths[0];
