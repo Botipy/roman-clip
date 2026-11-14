@@ -9,10 +9,11 @@ const recorder = require('./lib/recorder');
 protocol.registerSchemesAsPrivileged([{ scheme: 'clipmodel', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
+app.disableHardwareAcceleration(); // UI jest prosty; bez procesu GPU appka zajmuje mniej pamięci i nie rusza GPU gry
 
 const MODEL_ZIP_URL = 'https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip';
 const DEFAULTS = {
-  seconds: 30, afterSeconds: 0, fps: 60, height: 0, quality: 'high', encoder: 'auto', monitor: 0, captureMode: 'auto',
+  seconds: 30, afterSeconds: 0, fps: 60, height: 0, quality: 'high', encoder: 'auto', monitor: 0, captureMode: 'auto', codec: 'h264',
   audioDevice: '', hotkey: 'Alt+F10', voiceEnabled: false, voicePhrase: 'klip', micId: '',
   outputDir: path.join(app.getPath('videos'), 'Roman Clip'), sound: true, autostart: false, notify: true,
 };
@@ -174,7 +175,7 @@ ipcMain.handle('set', async (_e, patch) => {
   saveSettings();
   if (patch.hotkey !== undefined) registerHotkey();
   if (patch.autostart !== undefined) app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
-  const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'audioDevice'];
+  const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice'];
   if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording();
   if (['voiceEnabled', 'voicePhrase', 'micId'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
   pushStatus();
