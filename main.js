@@ -6,33 +6,55 @@ const { execFile } = require('child_process');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const recorder = require('./lib/recorder');
+const STRINGS = require('./renderer/strings.js');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'clipmodel', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 // Akceleracja GPU zostaje włączona: odtwarzacz klipów potrzebuje sprzętowego dekodowania (np. H.265).
 
-const MODEL_ZIP_URL = 'https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip';
+// Offline voice models (Vosk), one per UI language, downloaded on demand
+const MODEL_URLS = {
+  en: 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip',
+  pl: 'https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip',
+};
+const PHRASES = { en: 'clip', pl: 'klip' };
 const DEFAULTS = {
   seconds: 30, afterSeconds: 0, fps: 60, height: 0, quality: 'high', encoder: 'auto', monitor: 0, captureMode: 'auto', codec: 'h264',
-  audioDevice: '', hotkey: 'Alt+F10', voiceEnabled: false, voicePhrase: 'klip', micId: '',
+  audioDevice: '', hotkey: 'Alt+F10', voiceEnabled: false, voicePhrase: 'clip', micId: '', language: 'en',
   outputDir: path.join(app.getPath('videos'), 'Roman Clip'), sound: true, autostart: false, notify: true,
 };
 
 let settings = { ...DEFAULTS };
 let tray, settingsWin, voiceWin;
 let hotkeyOk = true;
-let model = { ready: false, progress: null, error: null };
+const models = { en: { ready: false, progress: null, error: null, mb: 40 }, pl: { ready: false, progress: null, error: null, mb: 50 } };
+const lang = () => (STRINGS[settings.language] ? settings.language : 'en');
+const M = () => models[lang()];
+// t(key, params): string in the current UI language (English fallback)
+const t = (key, params) => {
+  const s = STRINGS[lang()][key] ?? STRINGS.en[key] ?? key;
+  return params ? s.replace(/\{(\w+)\}/g, (_m, k) => (params[k] !== undefined ? params[k] : '{' + k + '}')) : s;
+};
 let lastVoiceAt = 0;
 let paused = false;
 let upd = { state: app.isPackaged ? 'idle' : 'dev', version: null, percent: 0, error: null };
 
 const storeFile = () => path.join(app.getPath('userData'), 'settings.json');
-const modelDir = () => path.join(app.getPath('userData'), 'model');
-const modelFile = () => path.join(modelDir(), 'model.tar.gz');
+const modelDir = (l = lang()) => path.join(app.getPath('userData'), 'model-' + l);
+const modelFile = (l = lang()) => path.join(modelDir(l), 'model.tar.gz');
 
 function loadSettings() {
-  try { settings = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(storeFile(), 'utf8')) }; } catch {}
+  try {
+    const stored = JSON.parse(fs.readFileSync(storeFile(), 'utf8'));
+    settings = { ...DEFAULTS, ...stored };
+    if (!stored.language && stored.voicePhrase === 'klip') settings.voicePhrase = PHRASES.en;   // migrate pre-i18n settings
+  } catch {}
+  // pre-i18n installs kept the Polish model in "model/": move it to "model-pl/"
+  try {
+    const legacy = path.join(app.getPath('userData'), 'model');
+    if (fs.existsSync(path.join(legacy, 'model.tar.gz')) && !fs.existsSync(modelDir('pl'))) fs.renameSync(legacy, modelDir('pl'));
+  } catch {}
 }
 function saveSettings() {
   fs.mkdirSync(path.dirname(storeFile()), { recursive: true });
@@ -40,7 +62,7 @@ function saveSettings() {
 }
 
 function status() {
-  return { ...recorder.getState(), hotkeyOk, model, paused, version: app.getVersion(), update: upd };
+  return { ...recorder.getState(), hotkeyOk, model: M(), paused, version: app.getVersion(), update: upd };
 }
 let trayTimer = null;
 function pushStatus() {
@@ -61,13 +83,13 @@ function startRecording() {
 
 function registerHotkey() {
   globalShortcut.unregisterAll();
-  try { hotkeyOk = !!settings.hotkey && globalShortcut.register(settings.hotkey, () => clip('skrót')); } catch { hotkeyOk = false; }
+  try { hotkeyOk = !!settings.hotkey && globalShortcut.register(settings.hotkey, () => clip('srcHotkey')); } catch { hotkeyOk = false; }
 }
 
 let clipping = false;
 async function clip(source) {
   if (paused) {
-    new Notification({ title: 'Roman Clip jest wstrzymany', body: 'Program nie nagrywa, więc nie ma czego zapisać. Wznów nagrywanie.' }).show();
+    new Notification({ title: t('nPausedTitle'), body: t('nPausedBody') }).show();
     return;
   }
   if (clipping) return;
@@ -75,36 +97,37 @@ async function clip(source) {
   try {
     if (settings.afterSeconds > 0) await new Promise((r) => setTimeout(r, settings.afterSeconds * 1000));
     const d = new Date(), p = (n) => String(n).padStart(2, '0');
-    const name = `Klip ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.mp4`;
+    const name = `${t('clipPrefix')} ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.mp4`;
     const file = await recorder.saveClip(settings.seconds + settings.afterSeconds, path.join(settings.outputDir, name));
     if (settings.sound) shell.beep();
     if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('clip:saved', file);
     if (settings.notify) {
-      const n = new Notification({ title: 'Zapisano klip', body: `${path.basename(file)} (${source})`, silent: true });
+      const n = new Notification({ title: t('nSavedTitle'), body: `${path.basename(file)} (${t(source)})`, silent: true });
       n.on('click', () => shell.showItemInFolder(file));
       n.show();
     }
   } catch (e) {
-    new Notification({ title: 'Nie udało się zapisać klipu', body: String(e.message).slice(0, 200) }).show();
+    new Notification({ title: t('nFailTitle'), body: (e.message === 'EMPTY_BUFFER' ? t('errEmptyBuffer') : String(e.message)).slice(0, 200) }).show();
   } finally { clipping = false; }
 }
 
-// ---------- model głosowy (Vosk, polski, pobierany raz) ----------
-function checkModel() { model.ready = fs.existsSync(modelFile()); }
+// ---------- voice model (Vosk, per language, downloaded once) ----------
+function checkModels() { for (const l of Object.keys(models)) models[l].ready = fs.existsSync(modelFile(l)); }
 
 function run(cmd, args) {
   return new Promise((res, rej) => execFile(cmd, args, { windowsHide: true }, (e, _o, se) => (e ? rej(new Error(se || e.message)) : res())));
 }
 
 async function downloadModel() {
-  if (model.progress !== null) return;
-  model = { ready: false, progress: 0, error: null };
+  const l = lang(), mdl = models[l];
+  if (mdl.progress !== null) return;
+  Object.assign(mdl, { ready: false, progress: 0, error: null });
   pushStatus();
-  const dir = modelDir(), zip = path.join(dir, 'model.zip'), tmp = path.join(dir, 'x');
+  const dir = modelDir(l), zip = path.join(dir, 'model.zip'), tmp = path.join(dir, 'x');
   try {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(tmp, { recursive: true });
-    const res = await net.fetch(MODEL_ZIP_URL);
+    const res = await net.fetch(MODEL_URLS[l]);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const total = Number(res.headers.get('content-length')) || 0;
     const out = fs.createWriteStream(zip);
@@ -113,25 +136,25 @@ async function downloadModel() {
       out.write(chunk);
       got += chunk.length;
       const pct = total ? Math.round((got / total) * 90) : 0;
-      if (pct !== model.progress) { model.progress = pct; pushStatus(); }
+      if (pct !== mdl.progress) { mdl.progress = pct; pushStatus(); }
     }
     await new Promise((r) => out.end(r));
-    // vosk-browser wymaga tar.gz; bsdtar z Windows 10+ rozpakowuje zip i pakuje tar.gz
+    // vosk-browser needs a tar.gz; the bsdtar shipped with Windows 10+ unpacks the zip and packs the tar.gz
     await run('tar', ['-xf', zip, '-C', tmp]);
     const folder = fs.readdirSync(tmp)[0];
-    await run('tar', ['-czf', modelFile(), '-C', tmp, folder]);
+    await run('tar', ['-czf', modelFile(l), '-C', tmp, folder]);
     fs.rmSync(tmp, { recursive: true, force: true });
     fs.rmSync(zip, { force: true });
-    model = { ready: true, progress: null, error: null };
+    Object.assign(mdl, { ready: true, progress: null, error: null });
   } catch (e) {
-    model = { ready: false, progress: null, error: String(e.message).slice(0, 200) };
+    Object.assign(mdl, { ready: false, progress: null, error: String(e.message).slice(0, 200) });
   }
   pushStatus();
   syncVoice();
 }
 
 function syncVoice() {
-  const want = settings.voiceEnabled && model.ready && !paused;
+  const want = settings.voiceEnabled && M().ready && !paused;
   if (!want) { if (voiceWin && !voiceWin.isDestroyed()) voiceWin.destroy(); voiceWin = null; return; }
   if (voiceWin && !voiceWin.isDestroyed()) voiceWin.destroy();
   voiceWin = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, 'preload.js'), backgroundThrottling: false } });
@@ -153,19 +176,19 @@ function openSettings() {
 
 function rebuildTray() {
   if (!tray) return;
-  tray.setToolTip((paused ? 'Roman Clip (wstrzymany)' : 'Roman Clip') + ' v' + app.getVersion());
+  tray.setToolTip((paused ? t('trPausedTip') : 'Roman Clip') + ' v' + app.getVersion());
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Roman Clip v' + app.getVersion(), enabled: false },
     { type: 'separator' },
-    { label: 'Zapisz klip teraz', click: () => clip('menu'), enabled: !paused },
-    { label: 'Ustawienia', click: openSettings },
-    { label: 'Otwórz folder z klipami', click: () => { fs.mkdirSync(settings.outputDir, { recursive: true }); shell.openPath(settings.outputDir); } },
+    { label: t('trSave'), click: () => clip('srcMenu'), enabled: !paused },
+    { label: t('trSettings'), click: openSettings },
+    { label: t('trFolder'), click: () => { fs.mkdirSync(settings.outputDir, { recursive: true }); shell.openPath(settings.outputDir); } },
     { type: 'separator' },
-    { label: paused ? 'Wznów nagrywanie' : 'Wstrzymaj nagrywanie', click: togglePause },
+    { label: paused ? t('trResume') : t('trPause'), click: togglePause },
     upd.state === 'ready'
-      ? { label: `Zainstaluj aktualizację ${upd.version} i zrestartuj`, click: installUpdate }
-      : { label: 'Sprawdź aktualizacje', click: checkUpdates },
-    { label: 'Wyjdź', click: () => app.quit() },
+      ? { label: t('trInstall', { v: upd.version }), click: installUpdate }
+      : { label: t('trCheck'), click: checkUpdates },
+    { label: t('trQuit'), click: () => app.quit() },
   ]));
 }
 
@@ -189,7 +212,7 @@ function wireUpdater() {
   autoUpdater.on('download-progress', (p) => setUpd({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (i) => {
     setUpd({ state: 'ready', version: i.version });
-    new Notification({ title: 'Roman Clip: aktualizacja gotowa', body: `Wersja ${i.version} zainstaluje się po zamknięciu programu.` }).show();
+    new Notification({ title: t('nUpdTitle'), body: t('nUpdBody', { v: i.version }) }).show();
   });
   autoUpdater.on('error', (e) => setUpd({ state: 'error', error: String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 160) }));
   return autoUpdater;
@@ -209,16 +232,19 @@ ipcMain.handle('get', () => ({ settings, status: status(), defaults: DEFAULTS })
 ipcMain.handle('set', async (_e, patch) => {
   const prev = settings;
   settings = { ...settings, ...patch };
+  if (patch.language && patch.language !== prev.language && prev.voicePhrase === PHRASES[prev.language]) {
+    settings.voicePhrase = PHRASES[lang()];          // default phrase follows the language, a custom phrase stays
+  }
   saveSettings();
   if (patch.hotkey !== undefined) registerHotkey();
   if (patch.autostart !== undefined) app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
   const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice'];
   if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording().catch((e) => console.error('restart rekordera:', e));
-  if (['voiceEnabled', 'voicePhrase', 'micId'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
+  if (['voiceEnabled', 'voicePhrase', 'micId', 'language'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
   pushStatus();
   return { settings, status: status() };
 });
-ipcMain.handle('clip', () => clip('przycisk'));
+ipcMain.handle('clip', () => clip('srcButton'));
 ipcMain.handle('togglePause', () => togglePause());
 ipcMain.on('win:min', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
 ipcMain.on('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
@@ -280,7 +306,7 @@ ipcMain.handle('openDir', () => { fs.mkdirSync(settings.outputDir, { recursive: 
 ipcMain.handle('audioDevices', () => recorder.listAudioDevices());
 ipcMain.handle('displays', () => screen.getAllDisplays().map((d, i) => {
   const w = Math.round(d.size.width * d.scaleFactor), h = Math.round(d.size.height * d.scaleFactor);
-  return { label: `Ekran ${i + 1} (${w}x${h})`, w, h };
+  return { n: i + 1, w, h };
 }));
 ipcMain.handle('downloadModel', downloadModel);
 ipcMain.on('voice:heard', (_e, text) => {
@@ -288,13 +314,13 @@ ipcMain.on('voice:heard', (_e, text) => {
   if (!phrase || !text.toLowerCase().includes(phrase)) return;
   if (Date.now() - lastVoiceAt < 5000) return;
   lastVoiceAt = Date.now();
-  clip('głos');
+  clip('srcVoice');
 });
 
 // ---------- start ----------
 app.whenReady().then(async () => {
   loadSettings();
-  checkModel();
+  checkModels();
   protocol.handle('clipmodel', async () => {
     const r = await net.fetch(pathToFileURL(modelFile()).toString());
     return new Response(r.body, { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/gzip' } });

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self' file:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
@@ -13,8 +13,9 @@
 <header class="titlebar">
   <div class="tb-title"><img src="../assets/icon.png" alt=""><b>ROMAN CLIP</b><span id="ver" class="tb-ver"></span></div>
   <div class="tb-btns">
-    <button id="wMin" title="Minimalizuj" aria-label="Minimalizuj"><svg viewBox="0 0 24 24"><path d="M5 17h14"/></svg></button>
-    <button id="wClose" class="x" title="Zamknij do zasobnika" aria-label="Zamknij"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button id="langBtn" class="lang" title="Language / Język">EN</button>
+    <button id="wMin" data-i18n-title="tbMin"><svg viewBox="0 0 24 24"><path d="M5 17h14"/></svg></button>
+    <button id="wClose" class="x" data-i18n-title="tbClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 </header>
 
@@ -31,121 +32,123 @@
     </div>
     <div class="hud-meta" id="meta"></div>
     <div class="hud-actions">
-      <button id="clipNow" class="rec-btn"><i class="dot"></i><span>ZAPISZ KLIP</span><kbd id="hkBtn"></kbd></button>
-      <button id="pauseBtn" class="pause-btn"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span>PAUZA</span></button>
+      <button id="clipNow" class="rec-btn"><i class="dot"></i><span data-i18n="saveClip"></span><kbd id="hkBtn"></kbd></button>
+      <button id="pauseBtn" class="pause-btn"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span data-i18n="pause"></span></button>
     </div>
-    <div id="pausedBanner" class="paused-banner" hidden>NAGRYWANIE WSTRZYMANE // PROGRAM NIE NAGRYWA EKRANU</div>
+    <div id="pausedBanner" class="paused-banner" data-i18n="pausedBanner" hidden></div>
   </section>
 
-  <div class="updbar"><span class="upd-dot"></span><span id="updText">…</span><button id="updBtn" class="btn sm">Sprawdź aktualizacje</button></div>
+  <div class="updbar"><span class="upd-dot"></span><span id="updText">…</span><button id="updBtn" class="btn sm"></button></div>
 
   <nav class="tabs">
-    <button class="tab on" data-tab="rec">USTAWIENIA</button>
-    <button class="tab" data-tab="clips">KLIPY <em id="clipCount">0</em></button>
+    <button class="tab on" data-tab="rec" data-i18n="tabSettings"></button>
+    <button class="tab" data-tab="clips"><span data-i18n="tabClips"></span> <em id="clipCount">0</em></button>
   </nav>
 
-  <!-- ===================== USTAWIENIA ===================== -->
+  <!-- ===================== SETTINGS ===================== -->
   <div id="tab-rec" class="pane">
 
     <section class="card">
-      <h2><b>01</b> KLIP</h2>
-      <div class="row"><label>Długość klipu</label>
-        <div class="slider"><input type="range" data-key="seconds" min="5" max="300" step="5"><span class="val" data-fmt="s"></span></div></div>
-      <div class="row"><label>Dogranie po wywołaniu</label>
-        <div class="slider"><input type="range" data-key="afterSeconds" min="0" max="30" step="1"><span class="val" data-fmt="s"></span></div></div>
-      <div class="row"><label>Klatki na sekundę</label>
+      <h2><b>01</b> <span data-i18n="c1"></span></h2>
+      <div class="row"><label data-i18n="lblLength"></label>
+        <div class="slider"><input type="range" data-key="seconds" min="5" max="300" step="5"><span class="val"></span></div></div>
+      <div class="row"><label data-i18n="lblAfter"></label>
+        <div class="slider"><input type="range" data-key="afterSeconds" min="0" max="30" step="1"><span class="val"></span></div></div>
+      <div class="row"><label data-i18n="lblFps"></label>
         <div class="seg" data-key="fps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="90">90</button><button data-v="120">120</button></div></div>
-      <div class="row"><label>Rozdzielczość</label>
-        <div class="seg" data-key="height"><button data-v="0">NATYWNA</button><button data-v="1440">1440P</button><button data-v="1080">1080P</button><button data-v="720">720P</button><button data-v="480">480P</button></div></div>
-      <div class="row"><label>Jakość</label>
-        <div class="seg" data-key="quality"><button data-v="low">NISKA</button><button data-v="medium">ŚREDNIA</button><button data-v="high">WYSOKA</button><button data-v="ultra">MAX</button></div></div>
-      <div class="row"><label>Kodek</label>
-        <div class="seg" data-key="codec"><button data-v="h264">H.264</button><button data-v="hevc">H.265 (MNIEJSZY)</button></div></div>
+      <div class="row"><label data-i18n="lblRes"></label>
+        <div class="seg" data-key="height"><button data-v="0" data-i18n="resNative"></button><button data-v="1440">1440P</button><button data-v="1080">1080P</button><button data-v="720">720P</button><button data-v="480">480P</button></div></div>
+      <div class="row"><label data-i18n="lblQuality"></label>
+        <div class="seg" data-key="quality"><button data-v="low" data-i18n="qLow"></button><button data-v="medium" data-i18n="qMed"></button><button data-v="high" data-i18n="qHigh"></button><button data-v="ultra" data-i18n="qMax"></button></div></div>
+      <div class="row"><label data-i18n="lblCodec"></label>
+        <div class="seg" data-key="codec"><button data-v="h264">H.264</button><button data-v="hevc" data-i18n="codecH265"></button></div></div>
       <div class="est" id="est"></div>
-      <p class="hint">Natywna rozdzielczość działa w całości na GPU i prawie nie obciąża procesora. Zmniejszanie rozdzielczości liczy się na CPU. H.265 daje plik o ok. 30–40% mniejszy, ale część programów (np. podgląd w Discordzie) go nie odtworzy.</p>
+      <p class="hint" data-i18n="hint1"></p>
     </section>
 
     <section class="card">
-      <h2><b>02</b> ŹRÓDŁO</h2>
-      <div class="row"><label>Ekran</label><select data-key="monitor" id="monitor"></select></div>
-      <div class="row"><label>Przechwytywanie</label>
-        <select data-key="captureMode"><option value="auto">Auto (zalecane, działa w grach)</option><option value="ddagrab">Desktop Duplication (gry)</option><option value="gdigrab">GDI (zgodność, nie łapie gier)</option></select></div>
-      <div class="row"><label>Enkoder</label>
-        <select data-key="encoder"><option value="auto">Auto (GPU, jeśli jest)</option><option value="h264_nvenc">NVIDIA (NVENC)</option><option value="h264_amf">AMD (AMF)</option><option value="h264_qsv">Intel (QSV)</option><option value="libx264">Procesor (x264)</option></select></div>
-      <div class="row"><label>Dźwięk w klipie</label><select data-key="audioDevice" id="audioDevice"></select></div>
-      <p class="hint">Gra (np. Valorant): wybierz ekran, na którym działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje. Dźwięk systemowy wymaga urządzenia „Stereo Mix” (włącz je w ustawieniach dźwięku Windowsa).</p>
+      <h2><b>02</b> <span data-i18n="c2"></span></h2>
+      <div class="row"><label data-i18n="lblMonitor"></label><select data-key="monitor" id="monitor"></select></div>
+      <div class="row"><label data-i18n="lblCapture"></label>
+        <select data-key="captureMode"><option value="auto" data-i18n="capAuto"></option><option value="ddagrab" data-i18n="capDda"></option><option value="gdigrab" data-i18n="capGdi"></option></select></div>
+      <div class="row"><label data-i18n="lblEncoder"></label>
+        <select data-key="encoder"><option value="auto" data-i18n="encAuto"></option><option value="h264_nvenc" data-i18n="encNvenc"></option><option value="h264_amf" data-i18n="encAmf"></option><option value="h264_qsv" data-i18n="encQsv"></option><option value="libx264" data-i18n="encX264"></option></select></div>
+      <div class="row"><label data-i18n="lblAudio"></label><select data-key="audioDevice" id="audioDevice"></select></div>
+      <p class="hint" data-i18n="hint2"></p>
     </section>
 
     <section class="card">
-      <h2><b>03</b> WYWOŁANIE</h2>
-      <div class="row"><label>Skrót klawiszowy</label>
-        <div class="hk"><div id="hkCaps" class="caps"></div><button id="hkChange" class="btn sm">ZMIEŃ</button></div></div>
+      <h2><b>03</b> <span data-i18n="c3"></span></h2>
+      <div class="row"><label data-i18n="lblHotkey"></label>
+        <div class="hk"><div id="hkCaps" class="caps"></div><button id="hkChange" class="btn sm" data-i18n="hkChange"></button></div></div>
       <p class="hint" id="hotkeyMsg"></p>
-      <label class="tog"><input type="checkbox" data-key="voiceEnabled"><span class="sw"></span><span class="t">Komenda głosowa</span></label>
-      <div class="row"><label>Fraza</label><input type="text" data-key="voicePhrase" placeholder="np. klip" spellcheck="false"></div>
-      <div class="row"><label>Mikrofon</label><select data-key="micId" id="micId"></select></div>
+      <label class="tog"><input type="checkbox" data-key="voiceEnabled"><span class="sw"></span><span class="t" data-i18n="togVoice"></span></label>
+      <div class="row"><label data-i18n="lblPhrase"></label><input type="text" data-key="voicePhrase" data-i18n-ph="phPhrase" spellcheck="false"></div>
+      <div class="row"><label data-i18n="lblMic"></label><select data-key="micId" id="micId"></select></div>
       <div id="modelBox">
-        <button id="modelBtn" class="btn">POBIERZ MODEL GŁOSOWY (OK. 50 MB, RAZ)</button>
+        <button id="modelBtn" class="btn"></button>
         <div class="bar"><div id="modelBar"></div></div>
         <p class="hint" id="modelMsg"></p>
       </div>
-      <p class="hint">Rozpoznawanie działa offline. Fraza musi być zwykłym słowem znanym modelowi (polskie, powszechne).</p>
+      <p class="hint" data-i18n="hint3"></p>
     </section>
 
     <section class="card">
-      <h2><b>04</b> PLIKI I SYSTEM</h2>
-      <div class="row"><label>Folder klipów</label>
-        <div class="inline"><input id="outputDir" readonly><button id="pick" class="btn sm">ZMIEŃ</button></div></div>
-      <label class="tog"><input type="checkbox" data-key="sound"><span class="sw"></span><span class="t">Dźwięk po zapisaniu klipu</span></label>
-      <label class="tog"><input type="checkbox" data-key="notify"><span class="sw"></span><span class="t">Powiadomienie po zapisaniu</span></label>
-      <label class="tog"><input type="checkbox" data-key="autostart"><span class="sw"></span><span class="t">Uruchamiaj z Windowsem</span></label>
+      <h2><b>04</b> <span data-i18n="c4"></span></h2>
+      <div class="row"><label data-i18n="lblLang"></label>
+        <div class="seg" data-key="language"><button data-v="en">ENGLISH</button><button data-v="pl">POLSKI</button></div></div>
+      <div class="row"><label data-i18n="lblFolder"></label>
+        <div class="inline"><input id="outputDir" readonly><button id="pick" class="btn sm" data-i18n="btnChange"></button></div></div>
+      <label class="tog"><input type="checkbox" data-key="sound"><span class="sw"></span><span class="t" data-i18n="togSound"></span></label>
+      <label class="tog"><input type="checkbox" data-key="notify"><span class="sw"></span><span class="t" data-i18n="togNotify"></span></label>
+      <label class="tog"><input type="checkbox" data-key="autostart"><span class="sw"></span><span class="t" data-i18n="togAutostart"></span></label>
     </section>
   </div>
 
-  <!-- ===================== KLIPY ===================== -->
+  <!-- ===================== CLIPS ===================== -->
   <div id="tab-clips" class="pane" hidden>
     <section class="player" id="player" hidden>
       <div class="vwrap paused" id="vwrap">
         <video id="vid" preload="metadata" playsinline></video>
-        <button class="vbig" id="vbig" aria-label="Odtwórz"></button>
+        <button class="vbig" id="vbig" data-i18n-title="ttPlay"></button>
         <div class="verr" id="verr" hidden>
-          <b>NIE MOGĘ ODTWORZYĆ TEGO KLIPU TUTAJ</b>
-          <span>Prawdopodobnie jest w H.265, a ta karta graficzna go nie dekoduje w programie.</span>
-          <button class="btn" id="verrOpen">OTWÓRZ W ODTWARZACZU SYSTEMOWYM</button>
+          <b data-i18n="vErrTitle"></b>
+          <span data-i18n="vErrText"></span>
+          <button class="btn" id="verrOpen" data-i18n="vErrOpen"></button>
         </div>
         <div class="vctl" id="vctl">
           <div class="seek" id="seek"><div class="seek-fill" id="seekFill"></div><div class="seek-knob" id="seekKnob"></div></div>
           <div class="vrow">
-            <button id="vPlay" aria-label="Odtwórz / pauza"></button>
-            <button id="vBack" title="Cofnij 5 s (←)" aria-label="Cofnij 5 sekund"></button>
-            <button id="vFwd" title="Do przodu 5 s (→)" aria-label="Do przodu 5 sekund"></button>
+            <button id="vPlay" data-i18n-title="ttPlay"></button>
+            <button id="vBack" data-i18n-title="ttBack"></button>
+            <button id="vFwd" data-i18n-title="ttFwd"></button>
             <span class="vtime" id="vTime">0:00 / 0:00</span>
             <span class="sp"></span>
-            <button id="vSpeed" class="txt" title="Prędkość">1×</button>
-            <button id="vMute" aria-label="Wycisz"></button>
-            <input type="range" id="vVol" min="0" max="1" step="0.05" value="1" aria-label="Głośność">
-            <button id="vFull" title="Pełny ekran (F)" aria-label="Pełny ekran"></button>
+            <button id="vSpeed" class="txt" data-i18n-title="ttSpeed">1×</button>
+            <button id="vMute" data-i18n-title="ttMute"></button>
+            <input type="range" id="vVol" min="0" max="1" step="0.05" value="1" data-i18n-title="ttVol">
+            <button id="vFull" data-i18n-title="ttFull"></button>
           </div>
         </div>
       </div>
       <div class="pbar">
         <div class="pname" id="pName"></div>
         <div class="pacts">
-          <button class="btn sm" id="aFolder">POKAŻ W FOLDERZE</button>
-          <button class="btn sm" id="aOpen">ODTWARZACZ SYSTEMOWY</button>
-          <button class="btn sm danger" id="aDel">USUŃ</button>
+          <button class="btn sm" id="aFolder" data-i18n="actFolder"></button>
+          <button class="btn sm" id="aOpen" data-i18n="actOpen"></button>
+          <button class="btn sm danger" id="aDel" data-i18n="actDelete"></button>
         </div>
       </div>
     </section>
 
     <div class="clips-head">
-      <h2><b>//</b> ZAPISANE KLIPY</h2>
-      <div><button id="refresh" class="btn sm">ODŚWIEŻ</button> <button id="openDir" class="btn sm">OTWÓRZ FOLDER</button></div>
+      <h2><b>//</b> <span data-i18n="clipsTitle"></span></h2>
+      <div><button id="refresh" class="btn sm" data-i18n="refresh"></button> <button id="openDir" class="btn sm" data-i18n="openFolder"></button></div>
     </div>
     <div id="grid" class="grid"></div>
     <div id="empty" class="empty" hidden>
-      <b>BRAK KLIPÓW</b>
-      <span>Naciśnij <kbd class="hkLive"></kbd> albo powiedz frazę, a klip pojawi się tutaj.</span>
+      <b data-i18n="emptyTitle"></b>
+      <span data-i18n-html="emptyText"></span>
     </div>
   </div>
 
@@ -153,6 +156,8 @@
 </div></div>
 
 <div id="toast" class="toast" hidden></div>
+<script src="strings.js"></script>
+<script src="i18n.js"></script>
 <script src="settings.js"></script>
 </body>
 </html>

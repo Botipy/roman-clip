@@ -1,8 +1,8 @@
 {
   "name": "roman-clip",
   "productName": "Roman Clip",
-  "version": "0.2.1",
-  "description": "Lekkie narzędzie do klipowania ekranu: skrót klawiszowy lub komenda głosowa",
+  "version": "0.3.0",
+  "description": "Lightweight instant-replay clipping tool for Windows: save the last seconds of your screen with a hotkey or a voice command",
   "main": "main.js",
   "author": "Botipy",
   "license": "MIT",
@@ -58,5 +58,23 @@
     "electron-updater": "^6.8.11",
     "ffmpeg-static": "^5.3.0",
     "vosk-browser": "^0.0.8"
-  }
+  },
+  "homepage": "https://github.com/Botipy/roman-clip#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Botipy/roman-clip.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Botipy/roman-clip/issues"
+  },
+  "keywords": [
+    "clips",
+    "instant-replay",
+    "screen-recorder",
+    "ffmpeg",
+    "electron",
+    "windows",
+    "game-clips",
+    "voice-command"
+  ]
 }

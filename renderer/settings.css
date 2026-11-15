@@ -95,7 +95,7 @@ body.is-paused .hud::before { background: repeating-linear-gradient(-45deg, var(
 .updbar { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 7px 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--y); font: 400 13px var(--mono); color: var(--mute); }
 .updbar #updText { flex: 1; letter-spacing: .04em; }
 .upd-dot { width: 8px; height: 8px; background: var(--mute); transform: rotate(45deg); }
-.updbar.good { border-left-color: var(--c); } .updbar.good #updText, .updbar.good .upd-dot { color: var(--c); background: var(--c); }
+.updbar.good { border-left-color: var(--c); } .updbar.good #updText { color: var(--c); } .updbar.good .upd-dot { background: var(--c); }
 .updbar.bad { border-left-color: var(--r); } .updbar.bad #updText { color: var(--r); } .updbar.bad .upd-dot { background: var(--r); }
 
 /* ---------- przyciski ---------- */
@@ -222,3 +222,7 @@ video { width: 100%; height: 100%; object-fit: contain; display: block; backgrou
 @keyframes toastin { from { opacity: 0; transform: translate(-50%, 14px); } }
 .foot { margin-top: 8px; text-align: center; font: 400 12px var(--mono); letter-spacing: .25em; color: #4a4a62; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 8px; } .pacts .btn { padding: 5px 8px; } }
+
+/* language toggle in the title bar */
+.tb-btns .lang { width: auto; padding: 0 14px; font: 700 13px var(--ui); letter-spacing: .18em; color: var(--c); border-left: 1px solid var(--line); }
+.tb-btns .lang:hover { background: var(--c); color: #000; }

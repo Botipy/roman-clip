@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const bridge = window.api; // nie "api": kolidowałoby z globalnym window.api z contextBridge
+const bridge = window.api; // not "api": that would clash with the global window.api exposed by contextBridge
 
 const ICON = {
   play: '<svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>',
@@ -11,20 +11,22 @@ const ICON = {
   full: '<svg viewBox="0 0 24 24"><path class="st" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
 };
 
-let S = {};            // ustawienia
-let ST = {};           // status z main
-let displays = [];     // {label, w, h}
+let S = {};            // settings
+let ST = {};           // status from main
+let displays = [];     // {w, h}
+let audioDevs = [];    // dshow audio devices
+let mics = [];         // [{id, label}]
 const NUM = new Set(['seconds', 'afterSeconds', 'fps', 'height', 'monitor']);
 const pad = (n) => String(n).padStart(2, '0');
 
 function toast(msg) {
-  const t = $('toast');
-  t.textContent = msg; t.hidden = false;
+  const el = $('toast');
+  el.textContent = msg; el.hidden = false;
   clearTimeout(toast.id);
-  toast.id = setTimeout(() => { t.hidden = true; }, 2600);
+  toast.id = setTimeout(() => { el.hidden = true; }, 2600);
 }
 
-// ---------------------------------------------------------------- ustawienia
+// ---------------------------------------------------------------- settings
 const fmtSec = (s) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)}:${pad(s % 60)} min`);
 
 function applyControls() {
@@ -47,13 +49,16 @@ function applyControls() {
 
 async function commit(key, value) {
   S = { ...S, [key]: value };
+  if (key === 'language') I18N.setLang(value);
   applyControls();
+  if (key === 'language') relabel();
   try {
     const r = await bridge.set({ [key]: value });
     S = r.settings; ST = r.status;
+    applyControls();                       // main may adjust related values (e.g. the default voice phrase per language)
     renderStatus(ST);
   } catch (e) {
-    toast('NIE UDAŁO SIĘ ZAPISAĆ USTAWIENIA');
+    toast(t('toastSetFail'));
     const cur = await bridge.get();
     S = cur.settings; renderStatus(cur.status); applyControls();
   }
@@ -86,19 +91,19 @@ function bindControls() {
   });
 }
 
-// Górna granica rozmiaru klipu (taka sama formuła jak limit bitrate'u w rekorderze)
+// Upper bound of the clip size (same formula as the bitrate cap in the recorder)
 function renderEst() {
   const d = displays[S.monitor] || displays[0] || { w: 1920, h: 1080 };
   const h = S.height || d.h, w = Math.round((d.w * h) / d.h);
   const base = { low: 6, medium: 12, high: 20, ultra: 40 }[S.quality] || 12;
   const mbps = Math.max(1.5, Math.min(base * ((w * h) / (1920 * 1080)) * (S.fps >= 50 ? 1 : 0.7), 80));
   const mb = (mbps * (S.seconds + S.afterSeconds)) / 8;
-  $('est').innerHTML = `GÓRNA GRANICA ROZMIARU KLIPU: <b>~${mb >= 100 ? Math.round(mb) : mb.toFixed(0)} MB</b> przy ${w}×${h}, ${S.fps} FPS<br>` +
-    `W praktyce zwykle kilka razy mniej (spokojny obraz). Limit prędkości: ${mbps.toFixed(0)} Mb/s.`;
+  $('est').innerHTML = t('est1', { mb: Math.round(mb), w, h, fps: S.fps }) + '<br>' + t('est2', { mbps: mbps.toFixed(0) });
 }
 
-// ---------------------------------------------------------------- skrót klawiszowy
+// ---------------------------------------------------------------- hotkey
 function renderCaps() {
+  if (capturing) return;
   const parts = (S.hotkey || '').split('+').filter(Boolean);
   $('hkCaps').innerHTML = parts.map((p) => `<kbd>${p}</kbd>`).join('');
   $('hkBtn').textContent = S.hotkey || '—';
@@ -106,13 +111,16 @@ function renderCaps() {
 }
 
 let capturing = false;
-function stopCapture() { capturing = false; $('hkCaps').classList.remove('listening'); $('hkChange').textContent = 'ZMIEŃ'; renderCaps(); }
+function stopCapture() {
+  capturing = false; $('hkCaps').classList.remove('listening');
+  $('hkChange').textContent = t('hkChange'); renderCaps();
+}
 $('hkChange').addEventListener('click', () => {
   if (capturing) return stopCapture();
   capturing = true;
   $('hkCaps').classList.add('listening');
-  $('hkCaps').innerHTML = '<kbd>NACIŚNIJ KOMBINACJĘ…</kbd>';
-  $('hkChange').textContent = 'ANULUJ';
+  $('hkCaps').innerHTML = `<kbd>${t('hkPress')}</kbd>`;
+  $('hkChange').textContent = t('hkCancel');
 });
 document.addEventListener('keydown', (e) => {
   if (!capturing) return;
@@ -136,28 +144,28 @@ function renderMeta() {
   const tags = [];
   if (ST.encoder) tags.push(['hl', ST.encoder.toUpperCase()]);
   if (ST.zeroCopy) tags.push(['hl', 'ZERO-COPY GPU']);
-  if (ST.mode) tags.push(['', ST.mode === 'ddagrab' ? 'DESKTOP DUPLICATION' : 'GDI']);
+  if (ST.mode) tags.push(['', ST.mode === 'ddagrab' ? t('tagDda') : t('tagGdi')]);
   tags.push(['', `${S.fps || 60} FPS`]);
-  tags.push(['', S.height ? `${S.height}P` : 'NATYWNA']);
-  tags.push(['', `${fmtSec(S.seconds || 30)} BUFORA`]);
-  if (S.audioDevice) tags.push(['', 'DŹWIĘK']);
-  if (S.voiceEnabled) tags.push(['warn', `GŁOS: „${S.voicePhrase}”`]);
-  $('meta').innerHTML = tags.map(([c, t]) => `<span class="tagc ${c}">${t}</span>`).join('');
+  tags.push(['', S.height ? `${S.height}P` : t('tagNative')]);
+  tags.push(['', t('tagBuffer', { t: fmtSec(S.seconds || 30) })]);
+  if (S.audioDevice) tags.push(['', t('tagAudio')]);
+  if (S.voiceEnabled) tags.push(['warn', t('tagVoice', { p: S.voicePhrase })]);
+  $('meta').innerHTML = tags.map(([c, txt]) => `<span class="tagc ${c}">${txt}</span>`).join('');
 }
 
 function renderUpdate(s) {
   $('ver').textContent = 'v' + s.version;
   const u = s.update || { state: 'idle' }, btn = $('updBtn'), bar = document.querySelector('.updbar');
-  btn.disabled = false; btn.textContent = 'Sprawdź aktualizacje'; btn.dataset.act = 'check';
+  btn.disabled = false; btn.textContent = t('updCheck'); btn.dataset.act = 'check';
   const map = {
-    dev: 'WERSJA DEWELOPERSKA (BEZ AKTUALIZACJI)', idle: 'AKTUALIZACJE: JESZCZE NIE SPRAWDZANO', checking: 'SPRAWDZAM AKTUALIZACJE…',
-    latest: 'MASZ NAJNOWSZĄ WERSJĘ', downloading: `POBIERAM ${u.version || 'NOWĄ WERSJĘ'} (${u.percent}%)…`,
-    ready: `GOTOWA WERSJA ${u.version}, ZAINSTALUJE SIĘ PO ZAMKNIĘCIU`, error: 'NIE UDAŁO SIĘ SPRAWDZIĆ: ' + (u.error || ''),
+    dev: t('updDev'), idle: t('updIdle'), checking: t('updChecking'), latest: t('updLatest'),
+    downloading: t('updDownloading', { v: u.version || t('updNewVersion'), p: u.percent }),
+    ready: t('updReady', { v: u.version }), error: t('updError', { e: u.error || '' }),
   };
   $('updText').textContent = map[u.state] || '';
   bar.classList.toggle('bad', u.state === 'error');
   bar.classList.toggle('good', u.state === 'ready' || u.state === 'downloading' || u.state === 'latest');
-  if (u.state === 'ready') { btn.textContent = 'Zainstaluj i zrestartuj'; btn.dataset.act = 'install'; }
+  if (u.state === 'ready') { btn.textContent = t('updInstall'); btn.dataset.act = 'install'; }
   if (['dev', 'checking', 'downloading'].includes(u.state)) btn.disabled = true;
 }
 
@@ -165,20 +173,21 @@ function renderStatus(s) {
   ST = s;
   renderUpdate(s);
   const chip = $('state');
-  if (s.error) { chip.className = 'chip err'; chip.textContent = 'BŁĄD: ' + s.error; chip.title = s.error; }
-  else if (s.paused) { chip.className = 'chip pause'; chip.textContent = 'WSTRZYMANY'; }
-  else if (s.running) { chip.className = 'chip on'; chip.textContent = 'NAGRYWA'; }
-  else { chip.className = 'chip'; chip.textContent = 'START…'; }
+  if (s.error) { chip.className = 'chip err'; chip.textContent = t('stError', { e: s.error }); chip.title = s.error; }
+  else if (s.paused) { chip.className = 'chip pause'; chip.textContent = t('stPaused'); chip.title = ''; }
+  else if (s.running) { chip.className = 'chip on'; chip.textContent = t('stRec'); chip.title = ''; }
+  else { chip.className = 'chip'; chip.textContent = t('stStarting'); chip.title = ''; }
   document.body.classList.toggle('is-paused', !!s.paused);
   $('pausedBanner').hidden = !s.paused;
-  $('pauseBtn').innerHTML = (s.paused ? ICON.play : ICON.pause) + `<span>${s.paused ? 'WZNÓW' : 'PAUZA'}</span>`;
-  $('hotkeyMsg').textContent = s.hotkeyOk ? '' : 'Ten skrót jest zajęty lub nieprawidłowy, wybierz inny.';
-  const m = s.model || {}, bar = $('modelBar').parentElement;
+  $('pauseBtn').innerHTML = (s.paused ? ICON.play : ICON.pause) + `<span>${t(s.paused ? 'resume' : 'pause')}</span>`;
+  $('hotkeyMsg').textContent = s.hotkeyOk ? '' : t('hkBad');
+  const m = s.model || {}, bar = $('modelBar').parentElement, dl = m.progress !== null && m.progress !== undefined;
+  $('modelBtn').textContent = t('modelBtn', { mb: m.mb || 50 });
   $('modelBtn').style.display = m.ready ? 'none' : '';
-  $('modelBtn').disabled = m.progress !== null && m.progress !== undefined;
-  bar.style.display = m.progress !== null && m.progress !== undefined ? 'block' : 'none';
+  $('modelBtn').disabled = dl;
+  bar.style.display = dl ? 'block' : 'none';
   $('modelBar').style.width = (m.progress || 0) + '%';
-  $('modelMsg').textContent = m.ready ? 'Model głosowy gotowy.' : m.error ? 'Błąd pobierania: ' + m.error : m.progress != null ? 'Pobieranie…' : '';
+  $('modelMsg').textContent = m.ready ? t('modelReady') : m.error ? t('modelErr', { e: m.error }) : dl ? t('modelDl') : '';
   renderMeta();
 }
 
@@ -189,29 +198,30 @@ $('updBtn').onclick = () => ($('updBtn').dataset.act === 'install' ? bridge.inst
 $('pick').onclick = async () => { const d = await bridge.pickDir(); if (d) commit('outputDir', d); };
 $('wMin').onclick = () => bridge.winMin();
 $('wClose').onclick = () => bridge.winClose();
+$('langBtn').onclick = () => commit('language', I18N.lang === 'en' ? 'pl' : 'en');
 
-// ---------------------------------------------------------------- zakładki
+// ---------------------------------------------------------------- tabs
 function showTab(name) {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach((tb) => tb.classList.toggle('on', tb.dataset.tab === name));
   $('tab-rec').hidden = name !== 'rec';
   $('tab-clips').hidden = name !== 'clips';
   if (name === 'clips') loadClips();
   else $('vid').pause();
 }
-document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+document.querySelectorAll('.tab').forEach((tb) => tb.addEventListener('click', () => showTab(tb.dataset.tab)));
 
-// ---------------------------------------------------------------- klipy
+// ---------------------------------------------------------------- clips
 let clips = [], cur = null, metaToken = 0;
-const fmtTime = (t) => (isFinite(t) ? `${Math.floor(t / 60)}:${pad(Math.floor(t % 60))}` : '0:00');
+const fmtTime = (s) => (isFinite(s) ? `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}` : '0:00');
 const fmtSize = (b) => (b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB');
 function ago(ms) {
   const m = Math.round((Date.now() - ms) / 60000);
-  if (m < 1) return 'przed chwilą'; if (m < 60) return `${m} min temu`;
-  const h = Math.round(m / 60); if (h < 24) return `${h} godz. temu`;
-  return `${Math.round(h / 24)} dn. temu`;
+  if (m < 1) return t('agoNow'); if (m < 60) return t('agoMin', { n: m });
+  const h = Math.round(m / 60); if (h < 24) return t('agoHour', { n: h });
+  return t('agoDay', { n: Math.round(h / 24) });
 }
 function niceName(n) {
-  const m = /^Klip (\d{4}-\d{2}-\d{2}) (\d{2})-(\d{2})-(\d{2})/.exec(n);
+  const m = /^(?:Klip|Clip) (\d{4}-\d{2}-\d{2}) (\d{2})-(\d{2})-(\d{2})/.exec(n);
   return m ? `${m[1]} · ${m[2]}:${m[3]}:${m[4]}` : n.replace(/\.mp4$/i, '');
 }
 
@@ -233,7 +243,7 @@ async function loadClips() {
   });
   if (cur && !clips.find((c) => c.path === cur.path)) closePlayer();
   const token = ++metaToken;
-  for (const c of clips) {                       // miniatury doczytujemy po kolei (lekko dla CPU)
+  for (const c of clips) {                       // thumbnails load one by one (cheap for the CPU)
     if (token !== metaToken) return;
     const meta = await bridge.clipMeta(c.path);
     const card = grid.querySelector(`[data-path="${CSS.escape(c.path)}"]`);
@@ -262,7 +272,7 @@ function selectClip(c, autoplay) {
   $('player').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// --- własny odtwarzacz
+// --- custom player
 const vid = $('vid'), vwrap = $('vwrap');
 $('vPlay').innerHTML = ICON.play; $('vBack').innerHTML = ICON.back; $('vFwd').innerHTML = ICON.fwd;
 $('vMute').innerHTML = ICON.vol; $('vFull').innerHTML = ICON.full; $('vbig').innerHTML = ICON.play;
@@ -325,7 +335,7 @@ document.addEventListener('keydown', (e) => {
   else if (k === 'm' || k === 'M') $('vMute').click();
 });
 
-// akcje na klipie
+// clip actions
 $('aFolder').onclick = () => cur && bridge.clipReveal(cur.path);
 $('aOpen').onclick = () => cur && bridge.clipOpen(cur.path);
 $('verrOpen').onclick = () => cur && bridge.clipOpen(cur.path);
@@ -333,43 +343,57 @@ let delT;
 $('aDel').onclick = async () => {
   const b = $('aDel');
   if (!b.classList.contains('confirm')) {
-    b.classList.add('confirm'); b.textContent = 'POTWIERDŹ USUNIĘCIE';
-    delT = setTimeout(() => { b.classList.remove('confirm'); b.textContent = 'USUŃ'; }, 3000);
+    b.classList.add('confirm'); b.textContent = t('actConfirm');
+    delT = setTimeout(() => { b.classList.remove('confirm'); b.textContent = t('actDelete'); }, 3000);
     return;
   }
-  clearTimeout(delT); b.classList.remove('confirm'); b.textContent = 'USUŃ';
+  clearTimeout(delT); b.classList.remove('confirm'); b.textContent = t('actDelete');
   const path = cur && cur.path;
   closePlayer();
-  if (path) { await bridge.clipDelete(path); toast('KLIP PRZENIESIONY DO KOSZA'); loadClips(); }
+  if (path) { await bridge.clipDelete(path); toast(t('toastTrashed')); loadClips(); }
 };
 $('refresh').onclick = loadClips;
 $('openDir').onclick = () => bridge.openDir();
 
 bridge.onStatus(renderStatus);
-bridge.onClipSaved(() => { toast('ZAPISANO KLIP'); loadClips(); });
+bridge.onClipSaved(() => { toast(t('toastSaved')); loadClips(); });
 
-// ---------------------------------------------------------------- start
+// ---------------------------------------------------------------- language / start
 function fillSelect(el, items, current, firstLabel) {
   el.innerHTML = '';
   if (firstLabel !== undefined) el.add(new Option(firstLabel, ''));
-  items.forEach(([v, t]) => el.add(new Option(t, v)));
+  items.forEach(([v, label]) => el.add(new Option(label, v)));
   el.value = current;
+}
+
+function fillDynamicSelects() {
+  fillSelect($('audioDevice'), audioDevs.map((d) => [d, d]), S.audioDevice, t('noAudio'));
+  fillSelect($('monitor'), displays.map((d, i) => [i, t('display', { n: i + 1, w: d.w, h: d.h })]), S.monitor);
+  fillSelect($('micId'), mics.map((m) => [m.id, m.label]), S.micId, t('micDefault'));
+}
+
+// Re-render everything that was built from JS after the language changed
+function relabel() {
+  I18N.apply();
+  $('langBtn').textContent = I18N.lang.toUpperCase();
+  fillDynamicSelects();
+  $('hkChange').textContent = capturing ? t('hkCancel') : t('hkChange');
+  applyControls();
+  renderStatus(ST);
+  if (!$('tab-clips').hidden) loadClips();
 }
 
 (async () => {
   const { settings, status } = await bridge.get();
   S = settings; ST = status;
+  I18N.setLang(S.language || 'en');
   const [devices, disp] = await Promise.all([bridge.audioDevices(), bridge.displays()]);
-  displays = disp;
-  fillSelect($('audioDevice'), devices.map((d) => [d, d]), S.audioDevice, 'Bez dźwięku');
-  fillSelect($('monitor'), displays.map((d, i) => [i, d.label]), S.monitor);
+  audioDevs = devices; displays = disp;
   try {
-    await navigator.mediaDevices.getUserMedia({ audio: true }).then((st) => st.getTracks().forEach((t) => t.stop()));
-    const mics = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
-    fillSelect($('micId'), mics.map((d) => [d.deviceId, d.label || 'Mikrofon']), S.micId, 'Domyślny');
-  } catch { fillSelect($('micId'), [], '', 'Domyślny'); }
+    await navigator.mediaDevices.getUserMedia({ audio: true }).then((st) => st.getTracks().forEach((tr) => tr.stop()));
+    mics = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput').map((d) => ({ id: d.deviceId, label: d.label || 'Microphone' }));
+  } catch { mics = []; }
   bindControls();
-  applyControls();
-  renderStatus(ST);
+  relabel();
   loadClips();
 })();
