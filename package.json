@@ -1,7 +1,7 @@
 {
   "name": "roman-clip",
   "productName": "Roman Clip",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Lightweight instant-replay clipping tool for Windows: save the last seconds of your screen with a hotkey or a voice command",
   "main": "main.js",
   "author": "Botipy",
