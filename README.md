@@ -26,6 +26,7 @@
 - **Hotkey or voice.** `Alt+F10` by default, or say your own phrase. Voice recognition is offline (a small [Vosk](https://alphacephei.com/vosk/) model, downloaded once).
 - **Instant save.** The buffer already holds encoded video, so saving a clip only glues segments together. No waiting, no re-encode.
 - **Made for games.** Uses Windows Desktop Duplication. If a game changes resolution or display mode, recording restarts by itself.
+- **Sound in your clips.** Everything you hear (game, music, voice chat) is recorded through the Windows loopback, with an optional microphone mixed in.
 - **Light on the machine.** On NVIDIA GPUs frames never leave the GPU (zero-copy). AMD uses the same path with an automatic fallback. ffmpeg runs at below-normal priority so the game keeps the CPU.
 - **Small files.** Constant-quality encoding with a bitrate cap, and an optional H.265 mode that makes files roughly 30–40% smaller.
 - **Clips panel with a built-in player.** Thumbnails, seeking, speed control, fullscreen, delete to the recycle bin.
@@ -83,7 +84,8 @@ Clips land in `Videos\Roman Clip` unless you pick another folder.
 | Display | Which monitor to record |
 | Capture | Auto, Desktop Duplication (games) or GDI (compatibility, will not capture games) |
 | Encoder | Auto, NVIDIA NVENC, AMD AMF, Intel QSV or CPU x264 |
-| Clip audio | A microphone or a "Stereo Mix" device. Off by default |
+| System audio | Records everything you hear (game, music, voice chat) via the Windows loopback. On by default, no extra drivers needed |
+| Microphone in clips | Optional. Mixed together with the system audio |
 | Hotkey | Click **CHANGE** and press the combination |
 | Voice command | Phrase, microphone and the offline model |
 | Clips folder, sound, notification, autostart | The usual |
@@ -130,7 +132,7 @@ To publish a release, bump `version` in `package.json`, then push a tag such as 
 | Black or empty clip from a game | Run the game in borderless or regular fullscreen, pick the display the game runs on, keep **Capture** on *Auto* |
 | Hotkey does nothing | Another program may own that shortcut. Pick a different one. Games running as administrator can swallow global hotkeys |
 | Voice command never triggers | Download the model, pick the right microphone and use a common word as the phrase. There is a 5 second cooldown |
-| No sound in clips | Choose a device under **Clip audio**. System sound needs "Stereo Mix" enabled in Windows sound settings |
+| No sound in clips | Make sure **System audio** is on (Settings → Source). It records what plays on your default output device. Pick a microphone too if you want your own voice |
 | Clip will not play in the app | It is probably H.265 and the GPU cannot decode it in the app. Use **System player** or switch to H.264 |
 | Update check fails with 404 | The repository is private or the release has no installer yet |
 
@@ -160,6 +162,7 @@ The look is a fan tribute inspired by *Cyberpunk 2077* and *Cyberpunk: Edgerunne
 - **Skrót albo głos.** Domyślnie `Alt+F10`, albo własna fraza. Rozpoznawanie mowy działa offline (mały model [Vosk](https://alphacephei.com/vosk/), pobierany jeden raz).
 - **Zapis od ręki.** Bufor zawiera już zakodowane wideo, więc zapis klipu to tylko sklejenie kawałków.
 - **Pod gry.** Korzysta z Desktop Duplication. Gdy gra zmieni rozdzielczość lub tryb ekranu, nagrywanie samo się restartuje.
+- **Dźwięk w klipach.** Wszystko, co słyszysz (gra, muzyka, czat głosowy), nagrywa się przez loopback Windowsa, opcjonalnie z domieszanym mikrofonem.
 - **Lekki dla komputera.** Na kartach NVIDIA klatki w ogóle nie opuszczają GPU (zero-copy), a AMD korzysta z tej samej ścieżki z automatycznym awaryjnym wyjściem, a ffmpeg ma obniżony priorytet, żeby gra dostała procesor.
 - **Małe pliki.** Stała jakość z limitem bitrate'u oraz opcjonalne H.265, które daje pliki mniejsze o ok. 30–40%.
 - **Panel klipów z odtwarzaczem.** Miniatury, przewijanie, prędkość, pełny ekran, usuwanie do kosza.
@@ -202,7 +205,8 @@ Klipy trafiają do `Wideo\Roman Clip`, o ile nie wybierzesz innego folderu.
 | Ekran | Który monitor nagrywać |
 | Przechwytywanie | Auto, Desktop Duplication (gry) albo GDI (zgodność, nie łapie gier) |
 | Enkoder | Auto, NVIDIA NVENC, AMD AMF, Intel QSV albo procesor x264 |
-| Dźwięk w klipie | Mikrofon lub „Stereo Mix". Domyślnie wyłączony |
+| Dźwięk systemowy | Nagrywa wszystko, co słyszysz (gra, muzyka, czat głosowy), przez loopback Windowsa. Domyślnie włączony, bez dodatkowych sterowników |
+| Mikrofon w klipie | Opcjonalny. Miksowany z dźwiękiem systemowym |
 | Skrót | Kliknij **ZMIEŃ** i naciśnij kombinację |
 | Komenda głosowa | Fraza, mikrofon i model offline |
 
@@ -243,7 +247,7 @@ Wydanie: podbij `version` w `package.json` i wypchnij tag, np. `v0.3.0`. Workflo
 | Czarny lub pusty klip z gry | Uruchom grę w trybie pełnoekranowym okienkowym lub zwykłym pełnym ekranie, wybierz ekran, na którym działa, i zostaw **Przechwytywanie** na *Auto* |
 | Skrót nie reaguje | Inny program może go używać. Wybierz inny. Gry uruchomione jako administrator potrafią połykać globalne skróty |
 | Komenda głosowa nie działa | Pobierz model, wybierz właściwy mikrofon i użyj zwykłego słowa jako frazy. Jest 5 sekund przerwy po każdym wywołaniu |
-| Brak dźwięku w klipach | Wybierz urządzenie w **Dźwięk w klipie**. Dźwięk systemowy wymaga włączonego „Stereo Mix" w ustawieniach dźwięku Windowsa |
+| Brak dźwięku w klipach | Sprawdź, czy **Dźwięk systemowy** jest włączony (Ustawienia → Źródło). Nagrywa to, co gra na domyślnym urządzeniu wyjściowym. Wybierz też mikrofon, jeśli chcesz mieć swój głos |
 | Klip nie odtwarza się w programie | Pewnie jest w H.265, a karta graficzna nie dekoduje go w programie. Użyj **Odtwarzacza systemowego** albo przełącz na H.264 |
 | Sprawdzanie aktualizacji kończy się błędem 404 | Repozytorium jest prywatne albo wydanie nie ma jeszcze instalatora |
 

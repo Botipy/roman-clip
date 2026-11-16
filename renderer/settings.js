@@ -148,7 +148,7 @@ function renderMeta() {
   tags.push(['', `${S.fps || 60} FPS`]);
   tags.push(['', S.height ? `${S.height}P` : t('tagNative')]);
   tags.push(['', t('tagBuffer', { t: fmtSec(S.seconds || 30) })]);
-  if (S.audioDevice) tags.push(['', t('tagAudio')]);
+  if (S.audioDevice || S.systemAudio) tags.push(['', t('tagAudio')]);
   if (S.voiceEnabled) tags.push(['warn', t('tagVoice', { p: S.voicePhrase })]);
   $('meta').innerHTML = tags.map(([c, txt]) => `<span class="tagc ${c}">${txt}</span>`).join('');
 }

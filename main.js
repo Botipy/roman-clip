@@ -1,5 +1,5 @@
 const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, dialog, shell, Notification,
-  nativeImage, protocol, net, session, screen } = require('electron');
+  nativeImage, protocol, net, session, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const recorder = require('./lib/recorder');
 const STRINGS = require('./renderer/strings.js');
+const sysAudio = require('./lib/sysaudio');
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'clipmodel', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
@@ -21,12 +22,12 @@ const MODEL_URLS = {
 const PHRASES = { en: 'clip', pl: 'klip' };
 const DEFAULTS = {
   seconds: 30, afterSeconds: 0, fps: 60, height: 0, quality: 'high', encoder: 'auto', monitor: 0, captureMode: 'auto', codec: 'h264',
-  audioDevice: '', hotkey: 'Alt+F10', voiceEnabled: false, voicePhrase: 'clip', micId: '', language: 'en',
+  audioDevice: '', systemAudio: true, hotkey: 'Alt+F10', voiceEnabled: false, voicePhrase: 'clip', micId: '', language: 'en',
   outputDir: path.join(app.getPath('videos'), 'Roman Clip'), sound: true, autostart: false, notify: true,
 };
 
 let settings = { ...DEFAULTS };
-let tray, settingsWin, voiceWin;
+let tray, settingsWin, voiceWin, audioWin;
 let hotkeyOk = true;
 const models = { en: { ready: false, progress: null, error: null, mb: 40 }, pl: { ready: false, progress: null, error: null, mb: 50 } };
 const lang = () => (STRINGS[settings.language] ? settings.language : 'en');
@@ -76,9 +77,23 @@ function display() {
   return all[settings.monitor] || screen.getPrimaryDisplay();
 }
 
-function startRecording() {
-  if (paused) return Promise.resolve();
-  return recorder.start(settings, display(), path.join(app.getPath('userData'), 'buffer'), pushStatus);
+async function startRecording() {
+  if (paused) return;
+  let port = 0;
+  if (settings.systemAudio) {
+    try { port = await sysAudio.start(); } catch (e) { console.error('system audio bridge:', e); }
+  } else sysAudio.stop();
+  syncAudioWin();
+  return recorder.start({ ...settings, sysAudioPort: port }, display(), path.join(app.getPath('userData'), 'buffer'), pushStatus);
+}
+
+// Hidden window that captures the Windows loopback (system sound) and feeds it to sysAudio
+function syncAudioWin() {
+  const want = settings.systemAudio && !paused;
+  if (!want) { if (audioWin && !audioWin.isDestroyed()) audioWin.destroy(); audioWin = null; return; }
+  if (audioWin && !audioWin.isDestroyed()) return;
+  audioWin = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, 'preload.js'), backgroundThrottling: false } });
+  audioWin.loadFile(path.join(__dirname, 'renderer', 'sysaudio.html'));
 }
 
 function registerHotkey() {
@@ -194,7 +209,7 @@ function rebuildTray() {
 
 async function togglePause() {
   paused = !paused;
-  if (paused) await recorder.stop(); else await startRecording();
+  if (paused) { await recorder.stop(); sysAudio.stop(); syncAudioWin(); } else await startRecording();
   syncVoice();
   pushStatus();
 }
@@ -238,7 +253,7 @@ ipcMain.handle('set', async (_e, patch) => {
   saveSettings();
   if (patch.hotkey !== undefined) registerHotkey();
   if (patch.autostart !== undefined) app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
-  const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice'];
+  const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice', 'systemAudio'];
   if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording().catch((e) => console.error('restart rekordera:', e));
   if (['voiceEnabled', 'voicePhrase', 'micId', 'language'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
   pushStatus();
@@ -309,6 +324,9 @@ ipcMain.handle('displays', () => screen.getAllDisplays().map((d, i) => {
   return { n: i + 1, w, h };
 }));
 ipcMain.handle('downloadModel', downloadModel);
+ipcMain.on('sysaudio:data', (_e, data) => {
+  sysAudio.push(ArrayBuffer.isView(data) ? Buffer.from(data.buffer, data.byteOffset, data.byteLength) : Buffer.from(data));
+});
 ipcMain.on('voice:heard', (_e, text) => {
   const phrase = settings.voicePhrase.trim().toLowerCase();
   if (!phrase || !text.toLowerCase().includes(phrase)) return;
@@ -325,8 +343,17 @@ app.whenReady().then(async () => {
     const r = await net.fetch(pathToFileURL(modelFile()).toString());
     return new Response(r.body, { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/gzip' } });
   });
-  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'media'));
-  session.defaultSession.setPermissionCheckHandler((_wc, perm) => perm === 'media');
+  // Only our own local pages run here. 'fullscreen' is needed by the clip player, 'media' by the voice command,
+  // 'display-capture' by the hidden system-audio window.
+  const ALLOWED = new Set(['media', 'fullscreen', 'display-capture']);
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(ALLOWED.has(perm)));
+  session.defaultSession.setPermissionCheckHandler((_wc, perm) => ALLOWED.has(perm));
+  session.defaultSession.setDisplayMediaRequestHandler(async (_req, cb) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'] });
+      cb({ video: sources[0], audio: 'loopback' });            // loopback = everything you hear
+    } catch { cb({}); }
+  });
 
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.ico')));
   tray.on('click', openSettings);
@@ -341,7 +368,7 @@ app.whenReady().then(async () => {
 
 app.on('second-instance', openSettings);
 app.on('window-all-closed', () => {}); // zostajemy w zasobniku
-app.on('will-quit', () => { globalShortcut.unregisterAll(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); sysAudio.stop(); });
 app.on('before-quit', async (e) => {
   if (recorder.getState().running) { e.preventDefault(); await recorder.stop(); app.quit(); }
 });

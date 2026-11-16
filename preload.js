@@ -22,4 +22,5 @@ contextBridge.exposeInMainWorld('api', {
   downloadModel: () => ipcRenderer.invoke('downloadModel'),
   onStatus: (cb) => ipcRenderer.on('status', (_e, s) => cb(s)),
   voiceHeard: (text) => ipcRenderer.send('voice:heard', text),
+  sysAudio: (buf) => ipcRenderer.send('sysaudio:data', buf),
 });

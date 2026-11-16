@@ -28,9 +28,9 @@
     // card 02
     c2: 'SOURCE', lblMonitor: 'Display', lblCapture: 'Capture', capAuto: 'Auto (recommended, works in games)', capDda: 'Desktop Duplication (games)',
     capGdi: 'GDI (compatibility, no games)', lblEncoder: 'Encoder', encAuto: 'Auto (GPU if available)', encNvenc: 'NVIDIA (NVENC)',
-    encAmf: 'AMD (AMF)', encQsv: 'Intel (QSV)', encX264: 'CPU (x264)', lblAudio: 'Clip audio', noAudio: 'No audio',
+    encAmf: 'AMD (AMF)', encQsv: 'Intel (QSV)', encX264: 'CPU (x264)', togSysAudio: 'System audio (game, music, chat)', lblAudio: 'Microphone in clips', noAudio: 'Off',
     display: 'Display {n} ({w}x{h})',
-    hint2: 'For a game (e.g. Valorant) pick the display it runs on. Borderless or regular fullscreen works best. If the game changes resolution, recording restarts by itself. System audio needs a “Stereo Mix” device (enable it in Windows sound settings).',
+    hint2: 'For a game (e.g. Valorant) pick the display it runs on. Borderless or regular fullscreen works best. If the game changes resolution, recording restarts by itself. System audio is captured automatically; add a microphone if you also want your own voice in the clips.',
     // card 03
     c3: 'TRIGGER', lblHotkey: 'Hotkey', hkChange: 'CHANGE', hkCancel: 'CANCEL', hkPress: 'PRESS KEYS…',
     hkBad: 'This shortcut is taken or invalid, pick another one.',
@@ -78,9 +78,9 @@
     hint1: 'Natywna rozdzielczość działa w całości na GPU i prawie nie obciąża procesora. Zmniejszanie rozdzielczości liczy się na CPU. H.265 daje plik o ok. 30–40% mniejszy, ale część programów (np. podgląd w Discordzie) go nie odtworzy.',
     c2: 'ŹRÓDŁO', lblMonitor: 'Ekran', lblCapture: 'Przechwytywanie', capAuto: 'Auto (zalecane, działa w grach)', capDda: 'Desktop Duplication (gry)',
     capGdi: 'GDI (zgodność, nie łapie gier)', lblEncoder: 'Enkoder', encAuto: 'Auto (GPU, jeśli jest)', encNvenc: 'NVIDIA (NVENC)',
-    encAmf: 'AMD (AMF)', encQsv: 'Intel (QSV)', encX264: 'Procesor (x264)', lblAudio: 'Dźwięk w klipie', noAudio: 'Bez dźwięku',
+    encAmf: 'AMD (AMF)', encQsv: 'Intel (QSV)', encX264: 'Procesor (x264)', togSysAudio: 'Dźwięk systemowy (gra, muzyka, czat)', lblAudio: 'Mikrofon w klipie', noAudio: 'Wyłączony',
     display: 'Ekran {n} ({w}x{h})',
-    hint2: 'Gra (np. Valorant): wybierz ekran, na którym działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje. Dźwięk systemowy wymaga urządzenia „Stereo Mix” (włącz je w ustawieniach dźwięku Windowsa).',
+    hint2: 'Gra (np. Valorant): wybierz ekran, na którym działa. Najlepiej pełny ekran okienkowy lub zwykły pełny ekran. Po zmianie rozdzielczości przez grę nagrywanie samo się restartuje. Dźwięk systemowy nagrywa się automatycznie; dodaj mikrofon, jeśli w klipach ma być też Twój głos.',
     c3: 'WYWOŁANIE', lblHotkey: 'Skrót klawiszowy', hkChange: 'ZMIEŃ', hkCancel: 'ANULUJ', hkPress: 'NACIŚNIJ KOMBINACJĘ…',
     hkBad: 'Ten skrót jest zajęty lub nieprawidłowy, wybierz inny.',
     togVoice: 'Komenda głosowa', lblPhrase: 'Fraza', phPhrase: 'np. klip', lblMic: 'Mikrofon', micDefault: 'Domyślny',
