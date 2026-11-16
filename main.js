@@ -26,7 +26,13 @@ const DEFAULTS = {
   outputDir: path.join(app.getPath('videos'), 'Roman Clip'), sound: true, autostart: false, notify: true,
 };
 
+// Windows starts us with this flag at login (see applyAutostart); in that case we stay in the tray instead of popping up a window
+const AUTOSTARTED = process.argv.includes('--autostart');
 let settings = { ...DEFAULTS };
+
+function applyAutostart() {
+  try { app.setLoginItemSettings({ openAtLogin: !!settings.autostart, args: ['--autostart'] }); } catch {}
+}
 let tray, settingsWin, voiceWin, audioWin;
 let hotkeyOk = true;
 const models = { en: { ready: false, progress: null, error: null, mb: 40 }, pl: { ready: false, progress: null, error: null, mb: 50 } };
@@ -252,7 +258,7 @@ ipcMain.handle('set', async (_e, patch) => {
   }
   saveSettings();
   if (patch.hotkey !== undefined) registerHotkey();
-  if (patch.autostart !== undefined) app.setLoginItemSettings({ openAtLogin: !!settings.autostart });
+  if (patch.autostart !== undefined) applyAutostart();
   const recKeys = ['seconds', 'afterSeconds', 'fps', 'height', 'quality', 'encoder', 'monitor', 'captureMode', 'codec', 'audioDevice', 'systemAudio'];
   if (recKeys.some((k) => k in patch && patch[k] !== prev[k])) await startRecording().catch((e) => console.error('restart rekordera:', e));
   if (['voiceEnabled', 'voicePhrase', 'micId', 'language'].some((k) => k in patch && patch[k] !== prev[k])) syncVoice();
@@ -361,7 +367,9 @@ app.whenReady().then(async () => {
   registerHotkey();
   await startRecording();
   syncVoice();
-  if (!fs.existsSync(storeFile())) { saveSettings(); openSettings(); }
+  if (!fs.existsSync(storeFile())) saveSettings();
+  applyAutostart();                                   // re-registers the login item so it carries the --autostart flag
+  if (!AUTOSTARTED) openSettings();                   // manual launch: show the window; Windows startup: stay in the tray
   setTimeout(checkUpdates, 8000);
   setInterval(checkUpdates, 6 * 60 * 60 * 1000);
 });

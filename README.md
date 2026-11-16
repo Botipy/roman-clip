@@ -53,7 +53,7 @@
 1. Open the **[Releases](https://github.com/Botipy/roman-clip/releases/latest)** page and download `Roman-Clip-Setup-x.y.z.exe`.
 2. Run it. It installs for the current user without asking questions and starts right away.
 3. Windows SmartScreen may warn because the installer is not code-signed: click **More info → Run anyway**.
-4. Roman Clip lives in the system tray. Click its icon to open the window.
+4. The window opens on launch. Close it and Roman Clip keeps recording from the system tray; click the tray icon to bring the window back. When it starts with Windows it stays in the tray and does not pop up.
 
 **Requirements:** Windows 10 or 11 (64-bit). A GPU with NVENC (NVIDIA), AMF (AMD) or Quick Sync (Intel) is recommended. Without one the app falls back to CPU encoding (x264). FFmpeg is bundled.
 
@@ -176,7 +176,7 @@ The look is a fan tribute inspired by *Cyberpunk 2077* and *Cyberpunk: Edgerunne
 1. Wejdź w **[Releases](https://github.com/Botipy/roman-clip/releases/latest)** i pobierz `Roman-Clip-Setup-x.y.z.exe`.
 2. Uruchom plik. Instaluje się bez pytań i od razu startuje.
 3. Windows SmartScreen może ostrzec, bo instalator nie jest podpisany: **Więcej informacji → Uruchom mimo to**.
-4. Program siedzi w zasobniku. Kliknij jego ikonę, żeby otworzyć okno.
+4. Okno otwiera się przy uruchomieniu. Po jego zamknięciu Roman Clip nagrywa dalej z zasobnika, a klik w ikonę przywraca okno. Gdy startuje razem z Windowsem, zostaje w zasobniku i nie wyskakuje.
 
 **Wymagania:** Windows 10 lub 11 (64-bit). Zalecana karta z NVENC (NVIDIA), AMF (AMD) lub Quick Sync (Intel). Bez niej program koduje procesorem (x264). FFmpeg jest w komplecie. Odinstalowanie: **Ustawienia → Aplikacje → Roman Clip**.
 
